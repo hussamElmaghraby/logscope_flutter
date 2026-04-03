@@ -1006,6 +1006,7 @@ class _HttpLogCardState extends State<_HttpLogCard> {
     final url = meta['url'] as String? ?? '';
     final statusCode = meta['statusCode'] as int?;
     final durationMs = meta['durationMs'] as int?;
+    final requestBody = meta['requestBody'] as String?;
     final responseBody = meta['responseBody'] as String?;
     final errorMessage = meta['errorMessage'] as String?;
     final isError = statusCode != null && statusCode >= 400;
@@ -1177,7 +1178,40 @@ class _HttpLogCardState extends State<_HttpLogCard> {
                 ),
               ),
 
-            // ── Expanded body ──
+            // ── Expanded request body ──
+            if (_expanded && requestBody != null) ...[
+              Container(height: 1, color: const Color(0x1AFFFFFF)),
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Request Body',
+                      style: TextStyle(
+                        color: const Color(0x66FFFFFF),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      requestBody,
+                      style: TextStyle(
+                        color: const Color(0xB3FFFFFF),
+                        fontSize: 10,
+                        fontFamily: 'monospace',
+                        height: 1.4,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // ── Expanded response body ──
             if (_expanded && responseBody != null) ...[
               Container(height: 1, color: const Color(0x1AFFFFFF)),
               Padding(
@@ -1211,7 +1245,7 @@ class _HttpLogCardState extends State<_HttpLogCard> {
             ],
 
             // ── Expand hint ──
-            if (!_expanded && (responseBody != null || entry.stackTrace != null))
+            if (!_expanded && (requestBody != null || responseBody != null || entry.stackTrace != null))
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Center(

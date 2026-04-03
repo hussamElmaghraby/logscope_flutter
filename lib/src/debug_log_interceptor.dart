@@ -91,6 +91,13 @@ class DebugLogInterceptor extends Interceptor {
       '(${_formatDuration(duration)})',
     );
 
+    // Capture request body from the original request
+    String? requestBody;
+    if (response.requestOptions.data != null) {
+      requestBody = _safeFormatBody(
+          response.requestOptions.data, _maxBodyLength);
+    }
+
     String? responseBody;
     if (response.data != null) {
       responseBody = _safeFormatBody(response.data, _maxBodyLength);
@@ -111,6 +118,7 @@ class DebugLogInterceptor extends Interceptor {
           'url': sanitizedUrl,
           'statusCode': statusCode,
           'durationMs': duration.inMilliseconds,
+          'requestBody': ?requestBody,
           'responseBody': ?responseBody,
         },
       ),
@@ -136,6 +144,13 @@ class DebugLogInterceptor extends Interceptor {
     );
     msg.writeln('Error: ${err.message ?? err.type.name}');
 
+    // Capture request body from the original request
+    String? requestBody;
+    if (err.requestOptions.data != null) {
+      requestBody = _safeFormatBody(
+          err.requestOptions.data, _maxBodyLength);
+    }
+
     String? responseBody;
     if (err.response?.data != null) {
       responseBody = _safeFormatBody(err.response!.data, _maxBodyLength);
@@ -158,6 +173,7 @@ class DebugLogInterceptor extends Interceptor {
           'durationMs': duration.inMilliseconds,
           'errorType': err.type.name,
           'errorMessage': err.message ?? err.type.name,
+          'requestBody': ?requestBody,
           'responseBody': ?responseBody,
         },
         stackTrace: err.stackTrace.toString(),

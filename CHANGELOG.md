@@ -1,3 +1,8 @@
+## 0.1.2
+
+- **Request body** now displayed in HTTP cards (tap to expand shows both Request Body and Response Body).
+- Request body is captured from `RequestOptions.data` and passed through to response/error log entries.
+
 ## 0.1.1
 
 - Added screenshots to README and pub.dev listing.
