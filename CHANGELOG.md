@@ -1,3 +1,14 @@
+## 0.3.0
+
+- **Simplified filter categories** — reduced to 4 clear filters: All, Network, Errors, Server.
+  - Removed Auth filter.
+  - **Network** now shows all HTTP requests (GET, POST, PUT, DELETE, etc.).
+  - Network tab is now the second tab after All.
+- **Detailed HTTP cards** — each request card now shows full details when expanded:
+  - Method, Full URL, Status, Request Headers, Request Body, Response Headers, Response Body.
+  - **Each section has its own copy button** for individual copying.
+- **Interceptor captures more data** — now logs request headers, response headers, and full URL.
+
 ## 0.2.0
 
 - **Redesigned filter categories** — replaced 10 scrollable chips with 6 unified, non-scrolling categories:

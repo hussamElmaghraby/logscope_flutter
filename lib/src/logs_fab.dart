@@ -444,11 +444,9 @@ class _LogLevelTheme {
 /// set of filters that all fit on screen without scrolling.
 enum _FilterCategory {
   all,
-  errors,
-  requests,
-  server,
   network,
-  auth,
+  errors,
+  server,
 }
 
 class _LogConsoleOverlay extends StatefulWidget {
@@ -521,26 +519,18 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
       switch (_activeFilter) {
         case _FilterCategory.all:
           break;
+        case _FilterCategory.network:
+          result = result
+              .where((e) => e.level == LogLevel.http)
+              .toList();
         case _FilterCategory.errors:
           result = result
               .where((e) =>
                   e.level == LogLevel.error || e.level == LogLevel.fatal)
               .toList();
-        case _FilterCategory.requests:
-          result = result
-              .where((e) => e.level == LogLevel.http)
-              .toList();
         case _FilterCategory.server:
           result = result
               .where((e) => e.layer == IssueLayer.server)
-              .toList();
-        case _FilterCategory.network:
-          result = result
-              .where((e) => e.layer == IssueLayer.network)
-              .toList();
-        case _FilterCategory.auth:
-          result = result
-              .where((e) => e.layer == IssueLayer.auth)
               .toList();
       }
 
@@ -772,29 +762,19 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
               color: Colors.white,
             ),
             _buildFilterItem(
+              label: 'Network',
+              category: _FilterCategory.network,
+              color: const Color(0xFF00BCD4),
+            ),
+            _buildFilterItem(
               label: 'Errors',
               category: _FilterCategory.errors,
               color: const Color(0xFFF44336),
             ),
             _buildFilterItem(
-              label: 'Requests',
-              category: _FilterCategory.requests,
-              color: const Color(0xFF00BCD4),
-            ),
-            _buildFilterItem(
               label: 'Server',
               category: _FilterCategory.server,
               color: const Color(0xFFF44336),
-            ),
-            _buildFilterItem(
-              label: 'Network',
-              category: _FilterCategory.network,
-              color: const Color(0xFFFF9800),
-            ),
-            _buildFilterItem(
-              label: 'Auth',
-              category: _FilterCategory.auth,
-              color: const Color(0xFFFF5722),
             ),
           ],
         ),
@@ -1029,12 +1009,15 @@ class _HttpLogCardState extends State<_HttpLogCard> {
     final meta = entry.metadata!;
     final method = meta['method'] as String? ?? '';
     final url = meta['url'] as String? ?? '';
+    final fullUrl = meta['fullUrl'] as String? ?? url;
     final statusCode = meta['statusCode'] as int?;
     final durationMs = meta['durationMs'] as int?;
+    final requestHeaders = meta['requestHeaders'] as String?;
     final requestBody = meta['requestBody'] as String?;
+    final responseHeaders = meta['responseHeaders'] as String?;
     final responseBody = meta['responseBody'] as String?;
     final errorMessage = meta['errorMessage'] as String?;
-    final isError = statusCode != null && statusCode >= 400;
+    final isError = statusCode != null && statusCode >= 400 || statusCode == null;
     final layer = entry.layer;
     final layerColor = Color(layer.colorValue);
 
@@ -1050,11 +1033,14 @@ class _HttpLogCardState extends State<_HttpLogCard> {
       statusColor = const Color(0xFF4CAF50);
     }
 
+    final hasDetails = requestHeaders != null ||
+        requestBody != null ||
+        responseHeaders != null ||
+        responseBody != null ||
+        errorMessage != null;
+
     return GestureDetector(
-      onTap: () => setState(() => _expanded = !_expanded),
-      onLongPress: () {
-        Clipboard.setData(ClipboardData(text: entry.toPlainText()));
-      },
+      onTap: hasDetails ? () => setState(() => _expanded = !_expanded) : null,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
@@ -1077,7 +1063,7 @@ class _HttpLogCardState extends State<_HttpLogCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header row: method + status + duration + layer ──
+            // ── Header row: method + status + duration + layer + timestamp ──
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
               child: Row(
@@ -1170,7 +1156,7 @@ class _HttpLogCardState extends State<_HttpLogCard> {
               ),
             ),
 
-            // ── URL ──
+            // ── URL (always visible) ──
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
               child: Text(
@@ -1186,7 +1172,7 @@ class _HttpLogCardState extends State<_HttpLogCard> {
               ),
             ),
 
-            // ── Error message ──
+            // ── Error message (always visible if present) ──
             if (errorMessage != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
@@ -1203,74 +1189,41 @@ class _HttpLogCardState extends State<_HttpLogCard> {
                 ),
               ),
 
-            // ── Expanded request body ──
-            if (_expanded && requestBody != null) ...[
-              Container(height: 1, color: const Color(0x1AFFFFFF)),
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Request Body',
-                      style: TextStyle(
-                        color: const Color(0x66FFFFFF),
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      requestBody,
-                      style: TextStyle(
-                        color: const Color(0xB3FFFFFF),
-                        fontSize: 10,
-                        fontFamily: 'monospace',
-                        height: 1.4,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            // ═══ Expanded detail sections ═══
+            if (_expanded) ...[
+              // ── Method ──
+              _buildCopyableSection('Method', method),
 
-            // ── Expanded response body ──
-            if (_expanded && responseBody != null) ...[
-              Container(height: 1, color: const Color(0x1AFFFFFF)),
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Response Body',
-                      style: TextStyle(
-                        color: const Color(0x66FFFFFF),
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      responseBody,
-                      style: TextStyle(
-                        color: const Color(0xB3FFFFFF),
-                        fontSize: 10,
-                        fontFamily: 'monospace',
-                        height: 1.4,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                  ],
-                ),
+              // ── Full URL ──
+              _buildCopyableSection('URL', fullUrl),
+
+              // ── Status ──
+              _buildCopyableSection(
+                'Status',
+                statusCode != null
+                    ? '$statusCode${durationMs != null ? '  (${durationMs}ms)' : ''}'
+                    : 'FAILED${errorMessage != null ? ' — $errorMessage' : ''}',
               ),
+
+              // ── Request Headers ──
+              if (requestHeaders != null)
+                _buildCopyableSection('Request Headers', requestHeaders),
+
+              // ── Request Body ──
+              if (requestBody != null)
+                _buildCopyableSection('Request Body', requestBody),
+
+              // ── Response Headers ──
+              if (responseHeaders != null)
+                _buildCopyableSection('Response Headers', responseHeaders),
+
+              // ── Response Body ──
+              if (responseBody != null)
+                _buildCopyableSection('Response Body', responseBody),
             ],
 
             // ── Expand hint ──
-            if (!_expanded && (requestBody != null || responseBody != null || entry.stackTrace != null))
+            if (!_expanded && hasDetails)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Center(
@@ -1285,9 +1238,83 @@ class _HttpLogCardState extends State<_HttpLogCard> {
                   ),
                 ),
               ),
+
+            // ── Collapse hint ──
+            if (_expanded)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Center(
+                  child: Text(
+                    '▲ tap to collapse',
+                    style: TextStyle(
+                      color: const Color(0x33FFFFFF),
+                      fontSize: 9,
+                      fontStyle: FontStyle.italic,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
+    );
+  }
+
+  /// Builds a section with a title, content, and a copy icon button.
+  Widget _buildCopyableSection(String title, String content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(height: 1, color: const Color(0x0DFFFFFF)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 6, 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        color: const Color(0x66FFFFFF),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: content));
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.copy_rounded,
+                        size: 14,
+                        color: const Color(0x4DFFFFFF),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                content,
+                style: TextStyle(
+                  color: const Color(0xB3FFFFFF),
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                  height: 1.4,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

@@ -9,6 +9,7 @@ import 'debug_log_store.dart';
 ///
 /// Features:
 /// - Logs method, URL, status code, duration, and truncated bodies
+/// - Captures request and response headers
 /// - Sanitizes sensitive headers (Authorization, API keys)
 /// - Sanitizes PII in URLs (long digit sequences)
 /// - Size-guarded body logging (skips bodies > 10KB)
@@ -56,6 +57,9 @@ class DebugLogInterceptor extends Interceptor {
       }
     }
 
+    // Format headers for display
+    final requestHeadersStr = _formatHeaders(sanitizedHeaders);
+
     DebugLogStore.instance.add(
       LogEntry(
         timestamp: DateTime.now(),
@@ -66,6 +70,8 @@ class DebugLogInterceptor extends Interceptor {
           'type': 'request',
           'method': options.method,
           'url': sanitizedUrl,
+          'fullUrl': options.uri.toString(),
+          'requestHeaders': ?requestHeadersStr,
           'requestBody': ?requestBody,
         },
       ),
@@ -91,12 +97,18 @@ class DebugLogInterceptor extends Interceptor {
       '(${_formatDuration(duration)})',
     );
 
-    // Capture request body from the original request
+    // Capture request data from the original request
+    final reqHeaders = _sanitizeHeaders(response.requestOptions.headers);
+    final requestHeadersStr = _formatHeaders(reqHeaders);
+
     String? requestBody;
     if (response.requestOptions.data != null) {
       requestBody = _safeFormatBody(
           response.requestOptions.data, _maxBodyLength);
     }
+
+    // Capture response headers
+    final resHeaders = _formatResponseHeaders(response.headers);
 
     String? responseBody;
     if (response.data != null) {
@@ -116,9 +128,12 @@ class DebugLogInterceptor extends Interceptor {
           'type': 'response',
           'method': response.requestOptions.method,
           'url': sanitizedUrl,
+          'fullUrl': response.requestOptions.uri.toString(),
           'statusCode': statusCode,
           'durationMs': duration.inMilliseconds,
+          'requestHeaders': ?requestHeadersStr,
           'requestBody': ?requestBody,
+          'responseHeaders': ?resHeaders,
           'responseBody': ?responseBody,
         },
       ),
@@ -144,11 +159,20 @@ class DebugLogInterceptor extends Interceptor {
     );
     msg.writeln('Error: ${err.message ?? err.type.name}');
 
-    // Capture request body from the original request
+    // Capture request data from the original request
+    final reqHeaders = _sanitizeHeaders(err.requestOptions.headers);
+    final requestHeadersStr = _formatHeaders(reqHeaders);
+
     String? requestBody;
     if (err.requestOptions.data != null) {
       requestBody = _safeFormatBody(
           err.requestOptions.data, _maxBodyLength);
+    }
+
+    // Capture response headers and body
+    String? resHeaders;
+    if (err.response != null) {
+      resHeaders = _formatResponseHeaders(err.response!.headers);
     }
 
     String? responseBody;
@@ -169,11 +193,14 @@ class DebugLogInterceptor extends Interceptor {
           'type': 'error',
           'method': err.requestOptions.method,
           'url': sanitizedUrl,
+          'fullUrl': err.requestOptions.uri.toString(),
           'statusCode': statusCode,
           'durationMs': duration.inMilliseconds,
           'errorType': err.type.name,
           'errorMessage': err.message ?? err.type.name,
+          'requestHeaders': ?requestHeadersStr,
           'requestBody': ?requestBody,
+          'responseHeaders': ?resHeaders,
           'responseBody': ?responseBody,
         },
         stackTrace: err.stackTrace.toString(),
@@ -212,6 +239,21 @@ class DebugLogInterceptor extends Interceptor {
       }
     });
     return sanitized;
+  }
+
+  /// Format sanitized headers map into a readable multi-line string.
+  static String? _formatHeaders(Map<String, String> headers) {
+    if (headers.isEmpty) return null;
+    return headers.entries.map((e) => '${e.key}: ${e.value}').join('\n');
+  }
+
+  /// Format Dio response headers into a readable multi-line string.
+  static String? _formatResponseHeaders(Headers headers) {
+    final map = headers.map;
+    if (map.isEmpty) return null;
+    return map.entries
+        .map((e) => '${e.key}: ${e.value.join(', ')}')
+        .join('\n');
   }
 
   /// Safely format body data with size guards.
