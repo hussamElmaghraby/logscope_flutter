@@ -435,6 +435,96 @@ class _LogLevelTheme {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Lightweight "Copied" toast — works without Scaffold/SnackBar
+// ═══════════════════════════════════════════════════════════════════════════
+
+void _showCopiedToast(BuildContext context) {
+  final overlay = Overlay.maybeOf(context);
+  if (overlay == null) return;
+
+  late final OverlayEntry entry;
+  entry = OverlayEntry(
+    builder: (_) => _CopiedToastWidget(onDismiss: () => entry.remove()),
+  );
+  overlay.insert(entry);
+}
+
+class _CopiedToastWidget extends StatefulWidget {
+  final VoidCallback onDismiss;
+  const _CopiedToastWidget({required this.onDismiss});
+
+  @override
+  State<_CopiedToastWidget> createState() => _CopiedToastWidgetState();
+}
+
+class _CopiedToastWidgetState extends State<_CopiedToastWidget>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _opacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 15),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 55),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+    ]).animate(_controller);
+    _controller.forward().then((_) => widget.onDismiss());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: MediaQuery.of(context).padding.bottom + 70,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _opacity,
+          builder: (_, child) => Opacity(opacity: _opacity.value, child: child),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xDD1A1A1A),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0x33FFFFFF)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle_outline,
+                    size: 16, color: const Color(0xFF00E676)),
+                const SizedBox(width: 6),
+                Text(
+                  'Copied',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Full-featured log console overlay
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -446,6 +536,8 @@ enum _FilterCategory {
   all,
   network,
   errors,
+  warnings,
+  info,
 }
 
 class _LogConsoleOverlay extends StatefulWidget {
@@ -527,6 +619,14 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
               .where((e) =>
                   e.level == LogLevel.error || e.level == LogLevel.fatal)
               .toList();
+        case _FilterCategory.warnings:
+          result = result
+              .where((e) => e.level == LogLevel.warning)
+              .toList();
+        case _FilterCategory.info:
+          result = result
+              .where((e) => e.level == LogLevel.info)
+              .toList();
       }
 
       // Apply search query
@@ -566,6 +666,7 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
     final text = _filteredLogs.map((e) => e.toPlainText()).join('\n');
     if (text.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) _showCopiedToast(context);
   }
 
   Future<void> _shareLogs() async {
@@ -765,6 +866,16 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
               label: 'Errors',
               category: _FilterCategory.errors,
               color: const Color(0xFFF44336),
+            ),
+            _buildFilterItem(
+              label: 'Warnings',
+              category: _FilterCategory.warnings,
+              color: const Color(0xFFFF9800),
+            ),
+            _buildFilterItem(
+              label: 'Info',
+              category: _FilterCategory.info,
+              color: const Color(0xFF4CAF50),
             ),
           ],
         ),
@@ -1278,6 +1389,7 @@ class _HttpLogCardState extends State<_HttpLogCard> {
                   GestureDetector(
                     onTap: () {
                       Clipboard.setData(ClipboardData(text: content));
+                      _showCopiedToast(context);
                     },
                     child: Padding(
                       padding: const EdgeInsets.all(4),
@@ -1367,6 +1479,7 @@ class _LogEntryTileState extends State<_LogEntryTile> {
       onTap: isLong ? () => setState(() => _expanded = !_expanded) : null,
       onLongPress: () {
         Clipboard.setData(ClipboardData(text: entry.toPlainText()));
+        _showCopiedToast(context);
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

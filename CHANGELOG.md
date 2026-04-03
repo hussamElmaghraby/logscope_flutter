@@ -1,3 +1,8 @@
+## 0.3.2
+
+- **Added Warnings and Info tabs** — filter bar now features 5 tabs: All, Network, Errors, Warnings, and Info.
+- **Added "Copied" toast** — visual confirmation appears when copying logs, requests, or specific HTTP card sections.
+
 ## 0.3.1
 
 - Removed **Server** filter — server errors already appear in both Errors and Network tabs.
