@@ -1,3 +1,15 @@
+## 0.2.0
+
+- **Redesigned filter categories** — replaced 10 scrollable chips with 6 unified, non-scrolling categories:
+  - **All** — show everything
+  - **Errors** — all error + fatal level logs
+  - **Requests** — all HTTP traffic
+  - **Server** — server layer issues (5xx, database, backend)
+  - **Network** — network layer issues (timeout, DNS, socket)
+  - **Auth** — auth layer issues (401/403, token, permissions)
+- All filters now fit on screen without scrolling.
+- Removed confusing separation between "log levels" and "issue layers".
+
 ## 0.1.2
 
 - **Request body** now displayed in HTTP cards (tap to expand shows both Request Body and Response Body).

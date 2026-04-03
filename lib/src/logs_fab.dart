@@ -438,6 +438,19 @@ class _LogLevelTheme {
 // Full-featured log console overlay
 // ═══════════════════════════════════════════════════════════════════════════
 
+/// Unified filter categories for the log console.
+///
+/// Combines log levels and issue layers into a single, tester-friendly
+/// set of filters that all fit on screen without scrolling.
+enum _FilterCategory {
+  all,
+  errors,
+  requests,
+  server,
+  network,
+  auth,
+}
+
 class _LogConsoleOverlay extends StatefulWidget {
   final VoidCallback onClose;
 
@@ -451,8 +464,7 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
   final ScrollController _scrollController = ScrollController();
   StreamSubscription<LogEntry>? _sub;
   List<LogEntry> _filteredLogs = [];
-  LogLevel? _selectedLevel;
-  IssueLayer? _selectedLayer;
+  _FilterCategory _activeFilter = _FilterCategory.all;
   String _searchQuery = '';
   bool _autoScroll = true;
   Timer? _searchDebounce;
@@ -502,23 +514,53 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
   void _refreshLogs() {
     if (!mounted) return;
     setState(() {
-      _filteredLogs = DebugLogStore.instance.filteredLogs(
-        level: _selectedLevel,
-        layer: _selectedLayer,
-        query: _searchQuery,
-      );
+      final allEntries = DebugLogStore.instance.entries;
+      var result = allEntries;
+
+      // Apply category filter
+      switch (_activeFilter) {
+        case _FilterCategory.all:
+          break;
+        case _FilterCategory.errors:
+          result = result
+              .where((e) =>
+                  e.level == LogLevel.error || e.level == LogLevel.fatal)
+              .toList();
+        case _FilterCategory.requests:
+          result = result
+              .where((e) => e.level == LogLevel.http)
+              .toList();
+        case _FilterCategory.server:
+          result = result
+              .where((e) => e.layer == IssueLayer.server)
+              .toList();
+        case _FilterCategory.network:
+          result = result
+              .where((e) => e.layer == IssueLayer.network)
+              .toList();
+        case _FilterCategory.auth:
+          result = result
+              .where((e) => e.layer == IssueLayer.auth)
+              .toList();
+      }
+
+      // Apply search query
+      if (_searchQuery.isNotEmpty) {
+        final lower = _searchQuery.toLowerCase();
+        result = result.where((e) {
+          return e.message.toLowerCase().contains(lower) ||
+              (e.tag?.toLowerCase().contains(lower) ?? false);
+        }).toList();
+      }
+
+      _filteredLogs = result;
     });
   }
 
-  void _onLevelChanged(LogLevel? level) {
-    _selectedLevel = level;
-    _selectedLayer = null; // Clear layer filter when switching to level
-    _refreshLogs();
-  }
-
-  void _onLayerChanged(IssueLayer? layer) {
-    _selectedLayer = _selectedLayer == layer ? null : layer;
-    _selectedLevel = null; // Clear level filter when switching to layer
+  void _onFilterChanged(_FilterCategory category) {
+    _activeFilter = _activeFilter == category
+        ? _FilterCategory.all
+        : category;
     _refreshLogs();
   }
 
@@ -542,12 +584,10 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
   }
 
   Future<void> _shareLogs() async {
-    // Use the store's toPlainText() which includes device context header
-    final text = DebugLogStore.instance.toPlainText(
-      level: _selectedLevel,
-      layer: _selectedLayer,
-      query: _searchQuery,
-    );
+    // Build plain text from the currently filtered logs
+    final text = _filteredLogs.isEmpty
+        ? ''
+        : _filteredLogs.map((e) => e.toPlainText()).join('\n');
     if (text.isEmpty) return;
 
     try {
@@ -603,7 +643,7 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                _selectedLayer != null || _selectedLevel != null
+                                _activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty
                                     ? Icons.filter_alt_off_outlined
                                     : Icons.receipt_long_outlined,
                                 size: 48,
@@ -611,7 +651,7 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                _selectedLayer != null || _selectedLevel != null || _searchQuery.isNotEmpty
+                                _activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty
                                     ? 'No matching logs'
                                     : 'No logs yet',
                                 style: TextStyle(
@@ -620,12 +660,11 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
                                   decoration: TextDecoration.none,
                                 ),
                               ),
-                              if (_selectedLayer != null || _selectedLevel != null || _searchQuery.isNotEmpty) ...[
+                              if (_activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty) ...[
                                 const SizedBox(height: 6),
                                 GestureDetector(
                                   onTap: () {
-                                    _selectedLayer = null;
-                                    _selectedLevel = null;
+                                    _activeFilter = _FilterCategory.all;
                                     _searchQuery = '';
                                     _refreshLogs();
                                   },
@@ -721,99 +760,85 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
   }
 
   Widget _buildFilterBar() {
-    return SizedBox(
-      height: 42,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        children: [
-          // ── Level filters ──
-          _FilterChip(
-            label: 'ALL',
-            selected: _selectedLevel == null && _selectedLayer == null,
-            color: Colors.white,
-            onTap: () {
-              _selectedLayer = null;
-              _onLevelChanged(null);
-            },
-          ),
-          _FilterChip(
-            label: 'ERROR',
-            selected: _selectedLevel == LogLevel.error,
-            color: _LogLevelTheme.barColor(LogLevel.error),
-            onTap: () => _onLevelChanged(
-              _selectedLevel == LogLevel.error ? null : LogLevel.error,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: SizedBox(
+        height: 42,
+        child: Row(
+          children: [
+            _buildFilterItem(
+              label: 'All',
+              category: _FilterCategory.all,
+              color: Colors.white,
             ),
-          ),
-          _FilterChip(
-            label: 'WARN',
-            selected: _selectedLevel == LogLevel.warning,
-            color: _LogLevelTheme.barColor(LogLevel.warning),
-            onTap: () => _onLevelChanged(
-              _selectedLevel == LogLevel.warning ? null : LogLevel.warning,
+            _buildFilterItem(
+              label: 'Errors',
+              category: _FilterCategory.errors,
+              color: const Color(0xFFF44336),
             ),
-          ),
-          _FilterChip(
-            label: 'INFO',
-            selected: _selectedLevel == LogLevel.info,
-            color: _LogLevelTheme.barColor(LogLevel.info),
-            onTap: () => _onLevelChanged(
-              _selectedLevel == LogLevel.info ? null : LogLevel.info,
+            _buildFilterItem(
+              label: 'Requests',
+              category: _FilterCategory.requests,
+              color: const Color(0xFF00BCD4),
             ),
-          ),
-          _FilterChip(
-            label: 'HTTP',
-            selected: _selectedLevel == LogLevel.http,
-            color: _LogLevelTheme.barColor(LogLevel.http),
-            onTap: () => _onLevelChanged(
-              _selectedLevel == LogLevel.http ? null : LogLevel.http,
+            _buildFilterItem(
+              label: 'Server',
+              category: _FilterCategory.server,
+              color: const Color(0xFFF44336),
             ),
-          ),
-          _FilterChip(
-            label: 'BLOC',
-            selected: _selectedLevel == LogLevel.bloc,
-            color: _LogLevelTheme.barColor(LogLevel.bloc),
-            onTap: () => _onLevelChanged(
-              _selectedLevel == LogLevel.bloc ? null : LogLevel.bloc,
+            _buildFilterItem(
+              label: 'Network',
+              category: _FilterCategory.network,
+              color: const Color(0xFFFF9800),
             ),
-          ),
+            _buildFilterItem(
+              label: 'Auth',
+              category: _FilterCategory.auth,
+              color: const Color(0xFFFF5722),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          // ── Divider ──
-          Center(
-            child: Container(
-              width: 1,
-              height: 20,
-              margin: const EdgeInsets.symmetric(horizontal: 6),
-              color: const Color(0x33FFFFFF),
+  Widget _buildFilterItem({
+    required String label,
+    required _FilterCategory category,
+    required Color color,
+  }) {
+    final selected = _activeFilter == category;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _onFilterChanged(category),
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+            decoration: BoxDecoration(
+              color: selected
+                  ? color.withValues(alpha: 0.25)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: selected ? color : Colors.white24,
+                width: 1,
+              ),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? color : Colors.white54,
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                decoration: TextDecoration.none,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-
-          // ── Layer filters ──
-          _FilterChip(
-            label: '🟥 SERVER',
-            selected: _selectedLayer == IssueLayer.server,
-            color: Color(IssueLayer.server.colorValue),
-            onTap: () => _onLayerChanged(IssueLayer.server),
-          ),
-          _FilterChip(
-            label: '🟧 NETWORK',
-            selected: _selectedLayer == IssueLayer.network,
-            color: Color(IssueLayer.network.colorValue),
-            onTap: () => _onLayerChanged(IssueLayer.network),
-          ),
-          _FilterChip(
-            label: '🟦 MOBILE',
-            selected: _selectedLayer == IssueLayer.mobile,
-            color: Color(IssueLayer.mobile.colorValue),
-            onTap: () => _onLayerChanged(IssueLayer.mobile),
-          ),
-          _FilterChip(
-            label: '🟨 AUTH',
-            selected: _selectedLayer == IssueLayer.auth,
-            color: Color(IssueLayer.auth.colorValue),
-            onTap: () => _onLayerChanged(IssueLayer.auth),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -861,7 +886,7 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
   }
 
   Widget _buildStatsRow() {
-    final hasFilter = _selectedLevel != null || _selectedLayer != null || _searchQuery.isNotEmpty;
+    final hasFilter = _activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty;
     final storeTotal = DebugLogStore.instance.totalCount;
     final filteredCount = _filteredLogs.length;
 
@@ -1427,52 +1452,3 @@ class _LogEntryTileState extends State<_LogEntryTile> {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Simple filter chip — pure GestureDetector + Container, no Material needed
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: selected
-                ? color.withValues(alpha: 0.25)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected ? color : Colors.white24,
-              width: 1,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? color : Colors.white54,
-              fontSize: 11,
-              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-              decoration: TextDecoration.none,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
