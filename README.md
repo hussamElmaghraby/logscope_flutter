@@ -1,0 +1,153 @@
+# logscope_flutter
+
+[![pub package](https://img.shields.io/pub/v/logscope_flutter.svg)](https://pub.dev/packages/logscope_flutter)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+**In-app debug console with automatic issue-layer classification for Flutter.**
+
+Logscope helps testers and developers instantly identify _where_ a problem originates — **Server**, **Network**, **Mobile**, or **Auth** — without reading raw logs. Drop it into any Flutter app with just 2 lines of code.
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---|---|
+| 🏷️ **Layer classification** | Every log is auto-tagged as `SERVER`, `NETWORK`, `MOBILE`, or `AUTH` based on HTTP status codes, exception patterns, and custom rules. |
+| 🔄 **Ring-buffer store** | Fixed-size circular buffer (`LogRingBuffer`) — memory-safe, O(1) insert, oldest entries evicted first. |
+| 🌐 **Dio interceptor** | One-line setup captures all HTTP traffic with structured request/response cards. |
+| 🎯 **Draggable FAB overlay** | Floating debug button with fullscreen log console — filter, search, share, copy, clear. |
+| 🔴 **Error toasts** | Brief overlay notification when an error is captured. |
+| 🛡️ **Flutter error capture** | Hooks into `FlutterError.onError` and `PlatformDispatcher.onError` to catch unhandled exceptions. |
+| 📤 **Export & share** | Export logs as plain text with device context headers — share via the system share sheet. |
+| 🏗️ **Custom rules** | Register your own classification rules for domain-specific patterns (Firebase, GraphQL, Stripe, etc.). |
+
+---
+
+## 📦 Installation
+
+Add to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  logscope_flutter: ^0.1.0
+```
+
+Then run:
+
+```bash
+flutter pub get
+```
+
+---
+
+## 🚀 Quick Start
+
+### 2-line integration
+
+```dart
+import 'package:logscope_flutter/logscope_flutter.dart';
+
+void main() {
+  Logscope.init(appName: 'MyApp', appVersion: '1.0.0');
+  runApp(Logscope.wrap(const MyApp()));
+}
+```
+
+### Capture HTTP traffic (Dio)
+
+```dart
+final dio = Dio();
+dio.interceptors.add(Logscope.dioInterceptor());
+```
+
+### Log from anywhere
+
+```dart
+Logscope.d('Loaded 42 items', tag: 'Repo');
+Logscope.i('Cache hit', tag: 'Cache');
+Logscope.w('Deprecated API', tag: 'API');
+Logscope.e('Save failed', tag: 'DB', error: e, stackTrace: s);
+Logscope.http('GET /users → 200');
+Logscope.nav('Pushed /settings');
+Logscope.bloc('CounterState(42)');
+```
+
+---
+
+## 🔧 Configuration
+
+```dart
+Logscope.init(
+  enabled: true,                    // master switch (defaults to kDebugMode)
+  captureFlutterErrors: true,       // hook FlutterError + PlatformDispatcher
+  showErrorToasts: true,            // overlay notification on errors
+  appName: 'MyApp',
+  appVersion: '2.3.1',
+  buildNumber: '47',
+  deviceModel: 'iPhone 14 Pro',     // pass from device_info_plus
+  osVersion: 'iOS 17.4',
+  bufferSize: 1000,                 // max entries in ring buffer
+);
+```
+
+---
+
+## 🏷️ Layer Classification
+
+Logs are automatically classified into issue layers:
+
+| Layer | Badge | Triggers |
+|---|---|---|
+| **Server** | 🟥 `SERVER` | HTTP 5xx, database errors, backend/upstream issues |
+| **Network** | 🟧 `NETWORK` | Timeouts, socket errors, DNS failures, no connectivity |
+| **Mobile** | 🟦 `MOBILE` | Null errors, type cast, format exceptions, widget overflow |
+| **Auth** | 🟨 `AUTH` | HTTP 401/403, token expired, permission denied |
+
+### Custom rules
+
+```dart
+Logscope.classifier.addRule(({
+  required message, required levelName, tag, metadata,
+}) {
+  if (message.contains('Firestore')) return IssueLayer.server;
+  return null; // let built-in rules decide
+});
+```
+
+---
+
+## 📊 API Reference
+
+### Logscope (facade)
+
+| Method | Description |
+|---|---|
+| `Logscope.init(...)` | Initialize the debug console (call once in `main()`) |
+| `Logscope.wrap(child)` | Wrap root widget to add the debug FAB |
+| `Logscope.dioInterceptor()` | Returns a Dio interceptor for HTTP logging |
+| `Logscope.d/i/w/e(...)` | Debug / Info / Warning / Error log shortcuts |
+| `Logscope.http(...)` | Log HTTP/network messages |
+| `Logscope.nav(...)` | Log navigation events |
+| `Logscope.bloc(...)` | Log BLoC/state events |
+| `Logscope.store` | Access the `DebugLogStore` singleton |
+| `Logscope.classifier` | Access the `LayerClassifier` for custom rules |
+| `Logscope.setDeviceContext(...)` | Update device/app info for exports |
+
+### AppLogger (lower-level)
+
+| Method | Description |
+|---|---|
+| `AppLogger.debug/info/warning/error(...)` | Full-name logging methods |
+| `AppLogger.network/security/navigation/bloc(...)` | Domain-specific logging |
+| `AppLogger.redact(value)` | Mask sensitive data for safe logging |
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request on [GitHub](https://github.com/hussamElmaghraby/logscope_flutter).
+
+## 📄 License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

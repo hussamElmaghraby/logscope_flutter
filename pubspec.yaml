@@ -1,0 +1,33 @@
+name: logscope_flutter
+description: >
+  In-app debug console with automatic issue-layer classification
+  (Server / Network / Mobile / Auth). Ring-buffer log store,
+  structured HTTP cards, error toasts, Dio interceptor, and a
+  draggable FAB overlay — built for testers and developers.
+version: 0.1.0
+homepage: https://github.com/hussamElmaghraby/logscope_flutter
+repository: https://github.com/hussamElmaghraby/logscope_flutter
+issue_tracker: https://github.com/hussamElmaghraby/logscope_flutter/issues
+topics:
+  - logging
+  - debug
+  - dio
+  - developer-tools
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.8.0+1
+  path_provider: ^2.1.5
+  share_plus: ^11.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
