@@ -9,6 +9,27 @@ Logscope helps testers and developers instantly identify _where_ a problem origi
 
 ---
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/fab_overlay.png" width="280" alt="Debug FAB & Error Toast" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/log_console.png" width="280" alt="Log Console" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/http_cards.png" width="280" alt="HTTP Structured Cards" />
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/layer_classification.png" width="600" alt="Layer Classification System" />
+</p>
+
+|  |  |
+|:---:|:---:|
+| **Draggable FAB** with error badge & toast | **Fullscreen Console** with filters & search |
+| **Structured HTTP Cards** with layer badges | **Auto Layer Classification** diagram |
+
+---
+
 ## ✨ Features
 
 | Feature | Description |

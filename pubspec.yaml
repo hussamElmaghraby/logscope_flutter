@@ -4,7 +4,7 @@ description: >
   (Server / Network / Mobile / Auth). Ring-buffer log store,
   structured HTTP cards, error toasts, Dio interceptor, and a
   draggable FAB overlay — built for testers and developers.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/hussamElmaghraby/logscope_flutter
 repository: https://github.com/hussamElmaghraby/logscope_flutter
 issue_tracker: https://github.com/hussamElmaghraby/logscope_flutter/issues
@@ -13,6 +13,16 @@ topics:
   - debug
   - dio
   - developer-tools
+
+screenshots:
+  - description: 'Draggable debug FAB with error badge and toast overlay'
+    path: screenshots/fab_overlay.png
+  - description: 'Fullscreen log console with filters, search, and layer badges'
+    path: screenshots/log_console.png
+  - description: 'Structured HTTP request/response cards with layer classification'
+    path: screenshots/http_cards.png
+  - description: 'Automatic issue-layer classification system diagram'
+    path: screenshots/layer_classification.png
 
 environment:
   sdk: ^3.8.1

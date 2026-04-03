@@ -1,3 +1,8 @@
+## 0.1.1
+
+- Added screenshots to README and pub.dev listing.
+- Added `screenshots` section to `pubspec.yaml`.
+
 ## 0.1.0
 
 - Initial release of `logscope_flutter`.
