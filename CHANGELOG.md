@@ -1,3 +1,8 @@
+## 0.3.1
+
+- Removed **Server** filter — server errors already appear in both Errors and Network tabs.
+- Simplified to **3 tabs**: All, Network, Errors.
+
 ## 0.3.0
 
 - **Simplified filter categories** — reduced to 4 clear filters: All, Network, Errors, Server.

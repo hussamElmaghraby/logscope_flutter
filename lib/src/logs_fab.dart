@@ -446,7 +446,6 @@ enum _FilterCategory {
   all,
   network,
   errors,
-  server,
 }
 
 class _LogConsoleOverlay extends StatefulWidget {
@@ -527,10 +526,6 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
           result = result
               .where((e) =>
                   e.level == LogLevel.error || e.level == LogLevel.fatal)
-              .toList();
-        case _FilterCategory.server:
-          result = result
-              .where((e) => e.layer == IssueLayer.server)
               .toList();
       }
 
@@ -769,11 +764,6 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
             _buildFilterItem(
               label: 'Errors',
               category: _FilterCategory.errors,
-              color: const Color(0xFFF44336),
-            ),
-            _buildFilterItem(
-              label: 'Server',
-              category: _FilterCategory.server,
               color: const Color(0xFFF44336),
             ),
           ],
