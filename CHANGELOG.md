@@ -1,3 +1,7 @@
+## 0.3.4
+
+- **Fixed search bar input** — resolved an issue where text entered into the log search bar would immediately clear during state rebuilds.
+
 ## 0.3.2
 
 - **Added Warnings and Info tabs** — filter bar now features 5 tabs: All, Network, Errors, Warnings, and Info.
