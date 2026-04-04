@@ -1,3 +1,7 @@
+## 0.3.5
+
+- **Removed body size limits** — full HTTP request and response bodies are now always shown, eliminating the `skipped, exceeds limit` truncation behavior.
+
 ## 0.3.4
 
 - **Fixed search bar input** — resolved an issue where text entered into the log search bar would immediately clear during state rebuilds.

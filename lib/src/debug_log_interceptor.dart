@@ -8,19 +8,12 @@ import 'debug_log_store.dart';
 /// into [DebugLogStore] for the debug console.
 ///
 /// Features:
-/// - Logs method, URL, status code, duration, and truncated bodies
+/// - Logs method, URL, status code, duration, and full bodies
 /// - Captures request and response headers
 /// - Sanitizes sensitive headers (Authorization, API keys)
 /// - Sanitizes PII in URLs (long digit sequences)
-/// - Size-guarded body logging (skips bodies > 10KB)
 /// - Stores structured metadata for rich HTTP card rendering
 class DebugLogInterceptor extends Interceptor {
-  /// Hard cap — bodies larger than this are skipped entirely.
-  static const int _hardCapBytes = 10000;
-
-  /// Max characters to show for request/response bodies.
-  static const int _maxBodyLength = 2000;
-
   /// Keys whose values will be masked in logged headers.
   static const _sensitiveKeys = [
     'authorization',
@@ -51,7 +44,7 @@ class DebugLogInterceptor extends Interceptor {
 
     String? requestBody;
     if (options.data != null) {
-      requestBody = _safeFormatBody(options.data, _maxBodyLength);
+      requestBody = _safeFormatBody(options.data);
       if (requestBody != null) {
         msg.write('Body: $requestBody');
       }
@@ -103,8 +96,7 @@ class DebugLogInterceptor extends Interceptor {
 
     String? requestBody;
     if (response.requestOptions.data != null) {
-      requestBody = _safeFormatBody(
-          response.requestOptions.data, _maxBodyLength);
+      requestBody = _safeFormatBody(response.requestOptions.data);
     }
 
     // Capture response headers
@@ -112,7 +104,7 @@ class DebugLogInterceptor extends Interceptor {
 
     String? responseBody;
     if (response.data != null) {
-      responseBody = _safeFormatBody(response.data, _maxBodyLength);
+      responseBody = _safeFormatBody(response.data);
       if (responseBody != null) {
         msg.write('Response: $responseBody');
       }
@@ -165,8 +157,7 @@ class DebugLogInterceptor extends Interceptor {
 
     String? requestBody;
     if (err.requestOptions.data != null) {
-      requestBody = _safeFormatBody(
-          err.requestOptions.data, _maxBodyLength);
+      requestBody = _safeFormatBody(err.requestOptions.data);
     }
 
     // Capture response headers and body
@@ -177,7 +168,7 @@ class DebugLogInterceptor extends Interceptor {
 
     String? responseBody;
     if (err.response?.data != null) {
-      responseBody = _safeFormatBody(err.response!.data, _maxBodyLength);
+      responseBody = _safeFormatBody(err.response!.data);
       if (responseBody != null) {
         msg.write('Response: $responseBody');
       }
@@ -256,8 +247,8 @@ class DebugLogInterceptor extends Interceptor {
         .join('\n');
   }
 
-  /// Safely format body data with size guards.
-  static String? _safeFormatBody(dynamic data, int maxLength) {
+  /// Safely format body data.
+  static String? _safeFormatBody(dynamic data) {
     if (data == null) return null;
 
     String raw;
@@ -274,10 +265,6 @@ class DebugLogInterceptor extends Interceptor {
       raw = data.toString();
     }
 
-    if (raw.length > _hardCapBytes) {
-      return '(${raw.length} chars — skipped, exceeds $_hardCapBytes char limit)';
-    }
-
     // Try to pretty-print JSON
     String formatted;
     try {
@@ -287,10 +274,6 @@ class DebugLogInterceptor extends Interceptor {
       formatted = raw;
     }
 
-    if (formatted.length <= maxLength) {
-      return formatted;
-    }
-
-    return '${formatted.substring(0, maxLength)}... (${raw.length} chars total)';
+    return formatted;
   }
 }
