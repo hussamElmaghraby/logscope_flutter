@@ -60,7 +60,7 @@ class _LogsFabState extends State<LogsFab> with SingleTickerProviderStateMixin {
   bool _initialized = false;
 
   late AnimationController _snapController;
-  Animation<double>? _snapAnimation;
+  CurvedAnimation? _snapAnimation;
   double _snapFrom = 0;
   double _snapTo = 0;
 
@@ -157,6 +157,7 @@ class _LogsFabState extends State<LogsFab> with SingleTickerProviderStateMixin {
   @override
   void dispose() {
     _logSubscription?.cancel();
+    _snapAnimation?.dispose();
     _snapController.dispose();
     _toastTimer?.cancel();
     // Restore previous error handler
@@ -205,6 +206,7 @@ class _LogsFabState extends State<LogsFab> with SingleTickerProviderStateMixin {
 
     _snapFrom = _left;
     _snapTo = targetLeft;
+    _snapAnimation?.dispose();
     _snapAnimation = CurvedAnimation(
       parent: _snapController,
       curve: Curves.easeOutBack,
