@@ -1,3 +1,7 @@
+## 0.3.6
+
+- **Updated README** — corrected the installation version from `^0.1.0` to `^0.3.5` to reflect the current release.
+
 ## 0.3.5
 
 - **Removed body size limits** — full HTTP request and response bodies are now always shown, eliminating the `skipped, exceeds limit` truncation behavior.

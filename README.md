@@ -51,7 +51,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  logscope_flutter: ^0.1.0
+  logscope_flutter: ^0.3.5
 ```
 
 Then run:
