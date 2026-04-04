@@ -551,6 +551,8 @@ class _LogConsoleOverlay extends StatefulWidget {
 
 class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   StreamSubscription<LogEntry>? _sub;
   List<LogEntry> _filteredLogs = [];
   _FilterCategory _activeFilter = _FilterCategory.all;
@@ -579,6 +581,8 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
   void dispose() {
     _sub?.cancel();
     _scrollController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     _searchDebounce?.cancel();
     super.dispose();
   }
@@ -752,6 +756,7 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
                                   onTap: () {
                                     _activeFilter = _FilterCategory.all;
                                     _searchQuery = '';
+                                    _searchController.clear();
                                     _refreshLogs();
                                   },
                                   child: Text(
@@ -947,8 +952,8 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
               ),
               Expanded(
                 child: EditableText(
-                  controller: TextEditingController(),
-                  focusNode: FocusNode(),
+                  controller: _searchController,
+                  focusNode: _searchFocusNode,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
