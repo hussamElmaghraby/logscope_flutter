@@ -15,7 +15,7 @@ import 'layer_classifier.dart';
 /// Place this wrapping `MaterialApp` so it sits on top of every screen.
 ///
 /// Features:
-/// - Only visible in debug/profile mode (hidden in release builds)
+/// - Works in all build modes (debug, profile, and release)
 /// - Draggable with snap-to-nearest-edge on release
 /// - Respects platform-specific safe areas
 /// - Red badge showing unread error count

@@ -42,7 +42,8 @@ class Logscope {
   /// Call this **once** in `main()` before `runApp()`.
   ///
   /// - [enabled] — master switch; when `false`, no logs are captured and
-  ///   [wrap] returns the child as-is. Defaults to `kDebugMode`.
+  ///   [wrap] returns the child as-is. Defaults to `true` (works in both
+  ///   debug and release mode).
   /// - [captureFlutterErrors] — hook into `FlutterError.onError` and
   ///   `PlatformDispatcher.instance.onError` to capture unhandled exceptions.
   /// - [showErrorToasts] — show a brief overlay notification on errors.
@@ -64,7 +65,7 @@ class Logscope {
     if (_initialized) return;
     _initialized = true;
 
-    _enabled = enabled ?? kDebugMode;
+    _enabled = enabled ?? true;
     _captureFlutterErrors = captureFlutterErrors;
     _showErrorToasts = showErrorToasts;
 
@@ -87,7 +88,7 @@ class Logscope {
     }
   }
 
-  static bool _enabled = kDebugMode;
+  static bool _enabled = true;
   static bool _captureFlutterErrors = true;
   static bool _showErrorToasts = true;
 
@@ -102,9 +103,7 @@ class Logscope {
   /// runApp(Logscope.wrap(MyApp()));
   /// ```
   ///
-  /// Returns [child] unchanged if [init] was called with `enabled: false`
-  /// or if the app is running in release mode and no explicit `enabled`
-  /// was passed.
+  /// Returns [child] unchanged if [init] was called with `enabled: false`.
   static Widget wrap(Widget child) {
     if (!_enabled) return child;
 

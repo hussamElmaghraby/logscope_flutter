@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 
 import 'debug_log_store.dart';
 
-/// Centralized logging utility that respects kDebugMode.
+/// Centralized logging utility for structured in-app logging.
 ///
-/// All console output is automatically disabled in release builds.
+/// Works in both debug and release builds. Console output via `debugPrint`
+/// is only shown in debug mode, but all logs are always captured in the
+/// in-app log store.
 /// Use this instead of debugPrint() or print() throughout the app.
 ///
 /// IMPORTANT: Never log sensitive data like:
@@ -165,5 +167,5 @@ class AppLogger {
   }
 
   /// Check if logging is enabled (useful for expensive log preparations)
-  static bool get isEnabled => kDebugMode;
+  static bool get isEnabled => true;
 }

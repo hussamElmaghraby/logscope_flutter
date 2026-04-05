@@ -1,3 +1,7 @@
+## 0.3.7
+
+- **Release-mode support** — Logscope now works in all build modes (debug, profile, and release). The FAB overlay, log capture, and interceptor are no longer restricted to debug-only. Pass `enabled: false` to `Logscope.init()` to disable in production if needed.
+
 ## 0.3.6
 
 - **Updated README** — corrected the installation version from `^0.1.0` to `^0.3.5` to reflect the current release.
