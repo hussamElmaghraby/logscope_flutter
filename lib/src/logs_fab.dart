@@ -440,90 +440,23 @@ class _LogLevelTheme {
 // Lightweight "Copied" toast — works without Scaffold/SnackBar
 // ═══════════════════════════════════════════════════════════════════════════
 
-void _showCopiedToast(BuildContext context) {
-  final overlay = Overlay.maybeOf(context);
-  if (overlay == null) return;
+/// InheritedWidget that provides a "copied" toast trigger to descendants.
+class _CopiedToastScope extends InheritedWidget {
+  final VoidCallback showToast;
 
-  late final OverlayEntry entry;
-  entry = OverlayEntry(
-    builder: (_) => _CopiedToastWidget(onDismiss: () => entry.remove()),
-  );
-  overlay.insert(entry);
-}
+  const _CopiedToastScope({
+    required this.showToast,
+    required super.child,
+  });
 
-class _CopiedToastWidget extends StatefulWidget {
-  final VoidCallback onDismiss;
-  const _CopiedToastWidget({required this.onDismiss});
-
-  @override
-  State<_CopiedToastWidget> createState() => _CopiedToastWidgetState();
-}
-
-class _CopiedToastWidgetState extends State<_CopiedToastWidget>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _opacity = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 15),
-      TweenSequenceItem(tween: ConstantTween(1.0), weight: 55),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
-    ]).animate(_controller);
-    _controller.forward().then((_) => widget.onDismiss());
+  static VoidCallback? of(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<_CopiedToastScope>()
+        ?.showToast;
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      bottom: MediaQuery.of(context).padding.bottom + 70,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: AnimatedBuilder(
-          animation: _opacity,
-          builder: (_, child) => Opacity(opacity: _opacity.value, child: child),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xDD1A1A1A),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0x33FFFFFF)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.check_circle_outline,
-                    size: 16, color: const Color(0xFF00E676)),
-                const SizedBox(width: 6),
-                Text(
-                  'Copied',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    decoration: TextDecoration.none,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  bool updateShouldNotify(_CopiedToastScope oldWidget) => false;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -562,6 +495,10 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
   bool _autoScroll = true;
   Timer? _searchDebounce;
 
+  // ── Toast state ──
+  bool _showToast = false;
+  Timer? _toastTimer;
+
   @override
   void initState() {
     super.initState();
@@ -586,7 +523,16 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
     _searchController.dispose();
     _searchFocusNode.dispose();
     _searchDebounce?.cancel();
+    _toastTimer?.cancel();
     super.dispose();
+  }
+
+  void _showCopiedToast() {
+    _toastTimer?.cancel();
+    setState(() => _showToast = true);
+    _toastTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (mounted) setState(() => _showToast = false);
+    });
   }
 
   void _onScroll() {
@@ -672,7 +618,7 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
     final text = _filteredLogs.map((e) => e.toPlainText()).join('\n');
     if (text.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: text));
-    if (mounted) _showCopiedToast(context);
+    if (mounted) _showCopiedToast();
   }
 
   Future<void> _shareLogs() async {
@@ -699,101 +645,151 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: ColoredBox(
-          color: const Color(0xCC121212),
-          child: Padding(
-            padding: EdgeInsets.only(
-              top: mq.padding.top,
-              bottom: mq.padding.bottom,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ── Header bar ──
-                _buildHeader(),
+    return _CopiedToastScope(
+      showToast: _showCopiedToast,
+      child: Stack(
+        children: [
+          // ── Main console UI ──
+          ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: ColoredBox(
+                color: const Color(0xCC121212),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: mq.padding.top,
+                    bottom: mq.padding.bottom,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── Header bar ──
+                      _buildHeader(),
 
-                // ── Search bar ──
-                _buildSearchBar(),
+                      // ── Search bar ──
+                      _buildSearchBar(),
 
-                // ── Filter chips ──
-                _buildFilterBar(),
+                      // ── Filter chips ──
+                      _buildFilterBar(),
 
-                // ── Stats row ──
-                _buildStatsRow(),
+                      // ── Stats row ──
+                      _buildStatsRow(),
 
-                // ── Divider ──
-                Container(height: 1, color: const Color(0x1AFFFFFF)),
+                      // ── Divider ──
+                      Container(height: 1, color: const Color(0x1AFFFFFF)),
 
-                // ── Log list ──
-                Expanded(
-                  child: _filteredLogs.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty
-                                    ? Icons.filter_alt_off_outlined
-                                    : Icons.receipt_long_outlined,
-                                size: 48,
-                                color: const Color(0x33FFFFFF),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty
-                                    ? 'No matching logs'
-                                    : 'No logs yet',
-                                style: TextStyle(
-                                  color: const Color(0x4DFFFFFF),
-                                  fontSize: 14,
-                                  decoration: TextDecoration.none,
-                                ),
-                              ),
-                              if (_activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty) ...[
-                                const SizedBox(height: 6),
-                                GestureDetector(
-                                  onTap: () {
-                                    _activeFilter = _FilterCategory.all;
-                                    _searchQuery = '';
-                                    _searchController.clear();
-                                    _refreshLogs();
-                                  },
-                                  child: Text(
-                                    'Clear filters',
-                                    style: TextStyle(
-                                      color: const Color(0xFF00E676),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      decoration: TextDecoration.none,
+                      // ── Log list ──
+                      Expanded(
+                        child: _filteredLogs.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty
+                                          ? Icons.filter_alt_off_outlined
+                                          : Icons.receipt_long_outlined,
+                                      size: 48,
+                                      color: const Color(0x33FFFFFF),
                                     ),
-                                  ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty
+                                          ? 'No matching logs'
+                                          : 'No logs yet',
+                                      style: TextStyle(
+                                        color: const Color(0x4DFFFFFF),
+                                        fontSize: 14,
+                                        decoration: TextDecoration.none,
+                                      ),
+                                    ),
+                                    if (_activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty) ...[
+                                      const SizedBox(height: 6),
+                                      GestureDetector(
+                                        onTap: () {
+                                          _activeFilter = _FilterCategory.all;
+                                          _searchQuery = '';
+                                          _searchController.clear();
+                                          _refreshLogs();
+                                        },
+                                        child: Text(
+                                          'Clear filters',
+                                          style: TextStyle(
+                                            color: const Color(0xFF00E676),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            decoration: TextDecoration.none,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
-                              ],
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          controller: _scrollController,
-                          itemCount: _filteredLogs.length,
-                          itemBuilder: (_, index) {
-                            final entry = _filteredLogs[index];
-                            if (_isHttpEntry(entry)) {
-                              return _HttpLogCard(entry: entry);
-                            }
-                            return _LogEntryTile(entry: entry);
-                          },
-                        ),
-                ),
+                              )
+                            : ListView.builder(
+                                controller: _scrollController,
+                                itemCount: _filteredLogs.length,
+                                itemBuilder: (_, index) {
+                                  final entry = _filteredLogs[index];
+                                  if (_isHttpEntry(entry)) {
+                                    return _HttpLogCard(entry: entry);
+                                  }
+                                  return _LogEntryTile(entry: entry);
+                                },
+                              ),
+                      ),
 
-                // ── Bottom action bar ──
-                _buildBottomBar(mq),
-              ],
+                      // ── Bottom action bar ──
+                      _buildBottomBar(mq),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
+
+          // ── Copied toast ──
+          if (_showToast)
+            Positioned(
+              bottom: mq.padding.bottom + 70,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 200),
+                  builder: (_, opacity, child) =>
+                      Opacity(opacity: opacity, child: child),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xDD1A1A1A),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0x33FFFFFF)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle_outline,
+                            size: 16, color: const Color(0xFF00E676)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Copied',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -953,17 +949,39 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
                 ),
               ),
               Expanded(
-                child: EditableText(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    decoration: TextDecoration.none,
+                child: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _searchController,
+                  builder: (context, value, child) {
+                    return Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        if (value.text.isEmpty)
+                          Text(
+                            'Search logs...',
+                            style: TextStyle(
+                              color: const Color(0x4DFFFFFF),
+                              fontSize: 14,
+                              decoration: TextDecoration.none,
+                            ),
+                          ),
+                        child!,
+                      ],
+                    );
+                  },
+                  child: EditableText(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      decoration: TextDecoration.none,
+                    ),
+                    cursorColor: Colors.white,
+                    backgroundCursorColor: Colors.grey,
+                    keyboardType: TextInputType.text,
+                    textInputAction: TextInputAction.search,
+                    onChanged: _onSearchChanged,
                   ),
-                  cursorColor: Colors.white,
-                  backgroundCursorColor: Colors.grey,
-                  onChanged: _onSearchChanged,
                 ),
               ),
             ],
@@ -1396,7 +1414,7 @@ class _HttpLogCardState extends State<_HttpLogCard> {
                   GestureDetector(
                     onTap: () {
                       Clipboard.setData(ClipboardData(text: content));
-                      _showCopiedToast(context);
+                      _CopiedToastScope.of(context)?.call();
                     },
                     child: Padding(
                       padding: const EdgeInsets.all(4),
@@ -1486,7 +1504,7 @@ class _LogEntryTileState extends State<_LogEntryTile> {
       onTap: isLong ? () => setState(() => _expanded = !_expanded) : null,
       onLongPress: () {
         Clipboard.setData(ClipboardData(text: entry.toPlainText()));
-        _showCopiedToast(context);
+        _CopiedToastScope.of(context)?.call();
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
