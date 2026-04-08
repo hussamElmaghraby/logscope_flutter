@@ -1,3 +1,10 @@
+## 0.3.8
+
+- **Fixed search bar crash** — reverted from `TextField` to `EditableText` to avoid `Material`, `MaterialLocalizations`, and `Overlay` ancestor requirements (the overlay sits outside `MaterialApp`).
+- **Fixed "Copied" toast** — replaced `Overlay`-dependent toast with a self-contained `Stack`-based toast that works without a `Scaffold` or `Overlay` ancestor.
+- **Added search hint text** — shows "Search logs..." placeholder via `ValueListenableBuilder`.
+- **Added example app** — full working example demonstrating all Logscope features.
+
 ## 0.3.7
 
 - **Release-mode support** — Logscope now works in all build modes (debug, profile, and release). The FAB overlay, log capture, and interceptor are no longer restricted to debug-only. Pass `enabled: false` to `Logscope.init()` to disable in production if needed.
