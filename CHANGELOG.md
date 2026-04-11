@@ -1,3 +1,8 @@
+## 0.3.9
+
+- **Shortened package description** — fits within pub.dev's 60–180 character guideline for search-engine-friendly display.
+- **Upgraded `share_plus`** — bumped from `^11.0.0` to `^13.0.0` to satisfy pub.dev's up-to-date dependency requirements.
+
 ## 0.3.8
 
 - **Fixed search bar crash** — reverted from `TextField` to `EditableText` to avoid `Material`, `MaterialLocalizations`, and `Overlay` ancestor requirements (the overlay sits outside `MaterialApp`).
