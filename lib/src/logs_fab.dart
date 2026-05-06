@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -1499,6 +1500,9 @@ class _HttpDetailsOverlayState extends State<_HttpDetailsOverlay> {
   }
 
   Widget _buildCopyableSection(String title, String content) {
+    final decoded = _tryDecodeJson(content);
+    final isStructured = decoded is Map || decoded is List;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
@@ -1531,19 +1535,202 @@ class _HttpDetailsOverlayState extends State<_HttpDetailsOverlay> {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            content,
-            style: const TextStyle(
-              color: Color(0xE6FFFFFF),
-              fontSize: 11,
-              fontFamily: 'monospace',
-              height: 1.4,
-              decoration: TextDecoration.none,
+          if (isStructured)
+            _JsonTreeView(value: decoded)
+          else
+            Text(
+              content,
+              style: const TextStyle(
+                color: Color(0xE6FFFFFF),
+                fontSize: 11,
+                fontFamily: 'monospace',
+                height: 1.4,
+                decoration: TextDecoration.none,
+              ),
             ),
-          ),
         ],
       ),
     );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JSON tree view — DevTools-style expandable Map/List inspector
+// ═══════════════════════════════════════════════════════════════════════════
+
+dynamic _tryDecodeJson(String text) {
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) return null;
+  final first = trimmed.codeUnitAt(0);
+  if (first != 0x7B /* { */ && first != 0x5B /* [ */) return null;
+  try {
+    return jsonDecode(trimmed);
+  } catch (_) {
+    return null;
+  }
+}
+
+class _JsonTreeView extends StatelessWidget {
+  final dynamic value;
+  const _JsonTreeView({required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return _JsonNode(
+      label: null,
+      value: value,
+      depth: 0,
+      initiallyExpanded: true,
+    );
+  }
+}
+
+class _JsonNode extends StatefulWidget {
+  final String? label;
+  final dynamic value;
+  final int depth;
+  final bool initiallyExpanded;
+
+  const _JsonNode({
+    required this.label,
+    required this.value,
+    required this.depth,
+    this.initiallyExpanded = false,
+  });
+
+  @override
+  State<_JsonNode> createState() => _JsonNodeState();
+}
+
+class _JsonNodeState extends State<_JsonNode> {
+  late bool _expanded = widget.initiallyExpanded;
+
+  static const _baseStyle = TextStyle(
+    fontFamily: 'monospace',
+    fontSize: 11,
+    height: 1.45,
+    decoration: TextDecoration.none,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final value = widget.value;
+    final isMap = value is Map;
+    final isList = value is List;
+    final isContainer = isMap || isList;
+    final indent = widget.depth * 12.0;
+
+    if (!isContainer) {
+      return Padding(
+        padding: EdgeInsets.only(left: indent + 14, top: 1, bottom: 1),
+        child: SelectableText.rich(
+          TextSpan(
+            style: _baseStyle,
+            children: [
+              if (widget.label != null)
+                TextSpan(
+                  text: '${widget.label}: ',
+                  style: const TextStyle(color: Color(0xCCFFFFFF)),
+                ),
+              TextSpan(
+                text: _scalarText(value),
+                style: TextStyle(color: _scalarColor(value)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final length = isMap ? value.length : (value as List).length;
+    final summary = isMap
+        ? 'Map (${length == 1 ? '1 item' : '$length items'})'
+        : 'List (${length == 1 ? '1 item' : '$length items'})';
+
+    final canExpand = length > 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: canExpand ? () => setState(() => _expanded = !_expanded) : null,
+          child: Padding(
+            padding: EdgeInsets.only(left: indent, top: 2, bottom: 2),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 14,
+                  child: Icon(
+                    canExpand
+                        ? (_expanded
+                            ? Icons.keyboard_arrow_down
+                            : Icons.keyboard_arrow_right)
+                        : Icons.remove,
+                    size: 14,
+                    color: const Color(0x99FFFFFF),
+                  ),
+                ),
+                Flexible(
+                  child: RichText(
+                    text: TextSpan(
+                      style: _baseStyle,
+                      children: [
+                        if (widget.label != null)
+                          TextSpan(
+                            text: '${widget.label}: ',
+                            style: const TextStyle(color: Color(0xCCFFFFFF)),
+                          ),
+                        TextSpan(
+                          text: summary,
+                          style: const TextStyle(color: Color(0x99FFFFFF)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_expanded) ..._buildChildren(value, isMap),
+      ],
+    );
+  }
+
+  List<Widget> _buildChildren(dynamic value, bool isMap) {
+    if (isMap) {
+      return (value as Map).entries.map<Widget>((e) {
+        return _JsonNode(
+          label: '${e.key}',
+          value: e.value,
+          depth: widget.depth + 1,
+        );
+      }).toList();
+    }
+    final list = value as List;
+    return List.generate(list.length, (i) {
+      return _JsonNode(
+        label: '[$i]',
+        value: list[i],
+        depth: widget.depth + 1,
+      );
+    });
+  }
+
+  String _scalarText(dynamic v) {
+    if (v == null) return 'null';
+    if (v is String) return '"$v"';
+    return v.toString();
+  }
+
+  Color _scalarColor(dynamic v) {
+    if (v == null) return const Color(0x80FFFFFF);
+    if (v is String) return const Color(0xFF8BC34A);
+    if (v is bool) return const Color(0xFFCE93D8);
+    if (v is num) return const Color(0xFF64B5F6);
+    return const Color(0xE6FFFFFF);
   }
 }
 
