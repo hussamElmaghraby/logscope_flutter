@@ -223,13 +223,20 @@ class _HomeScreenState extends State<HomeScreen> {
             _ActionCard(
               icon: Icons.cloud_download_rounded,
               title: 'GET — Success (200)',
-              subtitle: 'Fetch users from JSONPlaceholder',
+              subtitle: 'Fetch users with Auth headers',
               color: const Color(0xFF00B894),
               onTap: () => _makeRequest(
                 context,
                 () => _dio.get(
                   'https://jsonplaceholder.typicode.com/users',
-                  queryParameters: {'_limit': 3},
+                  queryParameters: {'role': 'customer', 'status': 'active'},
+                  options: Options(
+                    headers: {
+                      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5...',
+                      'Accept-Language': 'ar-EG',
+                      'X-App-Version': '1.0.0',
+                    },
+                  ),
                 ),
                 '✅ GET /users succeeded',
               ),
@@ -237,19 +244,32 @@ class _HomeScreenState extends State<HomeScreen> {
             _ActionCard(
               icon: Icons.cloud_upload_rounded,
               title: 'POST — Create Resource',
-              subtitle: 'POST a new todo item',
+              subtitle: 'POST a vehicle damage report',
               color: const Color(0xFF0984E3),
               onTap: () => _makeRequest(
                 context,
                 () => _dio.post(
-                  'https://jsonplaceholder.typicode.com/todos',
+                  'https://jsonplaceholder.typicode.com/posts',
                   data: {
-                    'title': 'Test todo from Logscope',
-                    'completed': false,
-                    'userId': 1,
+                    'title': 'Vehicle Damage Report',
+                    'vehicleId': 'V-83749',
+                    'damageType': 'Scratch',
+                    'severity': 'Minor',
+                    'location': {
+                      'lat': 30.0444,
+                      'lng': 31.2357,
+                    },
+                    'images': ['front_bumper_left.jpg', 'front_bumper_right.jpg'],
+                    'notes': 'Scratches on the front bumper discovered during check-in.',
                   },
+                  options: Options(
+                    headers: {
+                      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5...',
+                      'Content-Type': 'application/json',
+                    },
+                  ),
                 ),
-                '✅ POST /todos succeeded',
+                '✅ POST /posts succeeded',
               ),
             ),
             _ActionCard(

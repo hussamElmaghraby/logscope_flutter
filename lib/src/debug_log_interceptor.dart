@@ -50,25 +50,8 @@ class DebugLogInterceptor extends Interceptor {
       }
     }
 
-    // Format headers for display
-    final requestHeadersStr = _formatHeaders(sanitizedHeaders);
-
-    DebugLogStore.instance.add(
-      LogEntry(
-        timestamp: DateTime.now(),
-        level: LogLevel.http,
-        message: msg.toString().trimRight(),
-        tag: 'HTTP',
-        metadata: {
-          'type': 'request',
-          'method': options.method,
-          'url': sanitizedUrl,
-          'fullUrl': options.uri.toString(),
-          'requestHeaders': ?requestHeadersStr,
-          'requestBody': ?requestBody,
-        },
-      ),
-    );
+    // We no longer log the request here. Instead, it will be logged as a single entry
+    // combining both request and response in `onResponse` or `onError`.
 
     handler.next(options);
   }
@@ -123,10 +106,10 @@ class DebugLogInterceptor extends Interceptor {
           'fullUrl': response.requestOptions.uri.toString(),
           'statusCode': statusCode,
           'durationMs': duration.inMilliseconds,
-          'requestHeaders': ?requestHeadersStr,
-          'requestBody': ?requestBody,
-          'responseHeaders': ?resHeaders,
-          'responseBody': ?responseBody,
+          if (requestHeadersStr != null) 'requestHeaders': requestHeadersStr,
+          if (requestBody != null) 'requestBody': requestBody,
+          if (resHeaders != null) 'responseHeaders': resHeaders,
+          if (responseBody != null) 'responseBody': responseBody,
         },
       ),
     );
@@ -189,10 +172,10 @@ class DebugLogInterceptor extends Interceptor {
           'durationMs': duration.inMilliseconds,
           'errorType': err.type.name,
           'errorMessage': err.message ?? err.type.name,
-          'requestHeaders': ?requestHeadersStr,
-          'requestBody': ?requestBody,
-          'responseHeaders': ?resHeaders,
-          'responseBody': ?responseBody,
+          if (requestHeadersStr != null) 'requestHeaders': requestHeadersStr,
+          if (requestBody != null) 'requestBody': requestBody,
+          if (resHeaders != null) 'responseHeaders': resHeaders,
+          if (responseBody != null) 'responseBody': responseBody,
         },
         stackTrace: err.stackTrace.toString(),
       ),
