@@ -1,3 +1,7 @@
+## 0.4.5
+
+- **Pub.dev Screenshots Fix** — updated pubspec.yaml screenshot references to match the new promo images, ensuring they render correctly in the pub.dev right sidebar.
+
 ## 0.4.4
 
 - **Documentation Fix** — renamed image assets to forcefully bypass pub.dev CDN caching so the new AI promotional mockups appear immediately.

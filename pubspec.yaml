@@ -1,6 +1,6 @@
 name: logscope_flutter
 description: Zero-config in-app debug console with automatic issue-layer classification, structured HTTP cards, Dio interceptor, device info tab, and a draggable FAB overlay.
-version: 0.4.4
+version: 0.4.5
 homepage: https://github.com/hussamElmaghraby/logscope_flutter
 repository: https://github.com/hussamElmaghraby/logscope_flutter
 issue_tracker: https://github.com/hussamElmaghraby/logscope_flutter/issues
@@ -12,15 +12,15 @@ topics:
 
 screenshots:
   - description: 'Draggable debug FAB with error badge and toast overlay'
-    path: screenshots/fab_overlay.png
+    path: screenshots/promo_fab_overlay.png
   - description: 'Fullscreen log console with filters, search, and layer badges'
-    path: screenshots/log_console.png
+    path: screenshots/promo_log_console.png
   - description: 'Structured HTTP request/response cards with layer classification'
-    path: screenshots/http_cards.png
+    path: screenshots/promo_http_cards.png
   - description: 'Automatic issue-layer classification system diagram'
     path: screenshots/layer_classification.png
   - description: 'Device & App Info tab with auto-detected platform details'
-    path: screenshots/device_info_tab.png
+    path: screenshots/promo_device_info.png
 
 environment:
   sdk: ^3.8.1
