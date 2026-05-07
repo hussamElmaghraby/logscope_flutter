@@ -1,3 +1,7 @@
+## 0.4.4
+
+- **Documentation Fix** — renamed image assets to forcefully bypass pub.dev CDN caching so the new AI promotional mockups appear immediately.
+
 ## 0.4.3
 
 - **Promotional Update** — completely redesigned documentation assets. Replaced standard simulator screenshots with high-fidelity, 3D glassmorphic promotional mockups highlighting the core features (Console & Classification, HTTP Cards, Device Info).

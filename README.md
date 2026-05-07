@@ -12,13 +12,13 @@ Logscope helps testers and developers instantly identify _where_ a problem origi
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/fab_overlay.png" width="230" alt="Debug FAB & Error Toast" />
+  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/promo_fab_overlay.png" width="230" alt="Debug FAB & Error Toast" />
   &nbsp;&nbsp;
-  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/log_console.png" width="230" alt="Log Console" />
+  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/promo_log_console.png" width="230" alt="Log Console" />
   &nbsp;&nbsp;
-  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/device_info_tab.png" width="230" alt="Device Info Tab" />
+  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/promo_device_info.png" width="230" alt="Device Info Tab" />
   &nbsp;&nbsp;
-  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/http_cards.png" width="230" alt="HTTP Structured Cards" />
+  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/promo_http_cards.png" width="230" alt="HTTP Structured Cards" />
 </p>
 
 <p align="center">
