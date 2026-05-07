@@ -1,6 +1,6 @@
 name: logscope_flutter
-description: In-app debug console with automatic issue-layer classification, ring-buffer log store, structured HTTP cards, Dio interceptor, and a draggable FAB overlay.
-version: 0.4.0
+description: Zero-config in-app debug console with automatic issue-layer classification, structured HTTP cards, Dio interceptor, device info tab, and a draggable FAB overlay.
+version: 0.4.1
 homepage: https://github.com/hussamElmaghraby/logscope_flutter
 repository: https://github.com/hussamElmaghraby/logscope_flutter
 issue_tracker: https://github.com/hussamElmaghraby/logscope_flutter/issues

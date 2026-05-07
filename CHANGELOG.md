@@ -1,3 +1,8 @@
+## 0.4.1
+
+- **Updated Description** — improved `pubspec.yaml` description to better reflect zero-config initialization and the new Device Info tab.
+- **Refreshed Screenshots** — captured new screenshots for the pub.dev documentation to accurately reflect the muted/glassmorphic UI redesign implemented in v0.4.0.
+
 ## 0.4.0
 
 - **New Device Info Tab** — added a dedicated tab in the log console to view app, device, platform, and session information (with live duration/date/time).
