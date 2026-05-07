@@ -1,3 +1,7 @@
+## 0.4.3
+
+- **Promotional Update** — completely redesigned documentation assets. Replaced standard simulator screenshots with high-fidelity, 3D glassmorphic promotional mockups highlighting the core features (Console & Classification, HTTP Cards, Device Info).
+
 ## 0.4.2
 
 - **Emergency Patch** — replaced documentation screenshots to remove proprietary app background and use the generic `example` app background.
