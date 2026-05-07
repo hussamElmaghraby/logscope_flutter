@@ -1,3 +1,7 @@
+## 0.4.2
+
+- **Emergency Patch** — replaced documentation screenshots to remove proprietary app background and use the generic `example` app background.
+
 ## 0.4.1
 
 - **Updated Description** — improved `pubspec.yaml` description to better reflect zero-config initialization and the new Device Info tab.
