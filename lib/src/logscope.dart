@@ -1,5 +1,9 @@
+import 'dart:io';
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'debug_log_interceptor.dart';
 import 'debug_log_store.dart';
@@ -8,14 +12,17 @@ import 'logs_fab.dart';
 
 /// One-stop entry point for the debug console.
 ///
-/// Designed for **minimal integration effort** — most apps need just two lines:
+/// Designed for **zero-config integration** — most apps need just two lines:
 ///
 /// ```dart
 /// void main() {
-///   Logscope.init();            // ← sets up error capture & device info
+///   Logscope.init();            // ← auto-detects everything
 ///   runApp(Logscope.wrap(MyApp()));  // ← adds the draggable FAB
 /// }
 /// ```
+///
+/// App name, version, build number, package name, environment, build mode,
+/// Dart version, OS, locale, and timezone are all **auto-detected**.
 ///
 /// To log from anywhere in the app:
 ///
@@ -41,16 +48,12 @@ class Logscope {
   ///
   /// Call this **once** in `main()` before `runApp()`.
   ///
-  /// - [enabled] — master switch; when `false`, no logs are captured and
-  ///   [wrap] returns the child as-is. Defaults to `true` (works in both
-  ///   debug and release mode).
-  /// - [captureFlutterErrors] — hook into `FlutterError.onError` and
-  ///   `PlatformDispatcher.instance.onError` to capture unhandled exceptions.
-  /// - [showErrorToasts] — show a brief overlay notification on errors.
-  /// - [appName], [appVersion], [buildNumber] — included in exported log reports.
-  /// - [deviceModel], [osVersion] — included in exported log reports.
-  ///   Pass these values if you already have them (e.g. from `device_info_plus`).
-  /// - [bufferSize] — max number of log entries in the ring buffer (default: 1000).
+  /// All parameters are optional — the package auto-detects:
+  /// - **appName**, **appVersion**, **buildNumber**, **packageName** — via `package_info_plus`.
+  /// - **environment** — inferred from build mode (Debug → Development, Profile → Staging, Release → Production).
+  /// - **osVersion**, **locale**, **timezone**, **dartVersion**, **flutterMode** — from the platform.
+  ///
+  /// Pass explicit values only to override the auto-detected defaults.
   static void init({
     bool? enabled,
     bool captureFlutterErrors = true,
@@ -58,8 +61,13 @@ class Logscope {
     String? appName,
     String? appVersion,
     String? buildNumber,
+    String? packageName,
+    String? environment,
+    String? flutterVersion,
     String? deviceModel,
     String? osVersion,
+    String? manufacturer,
+    String? brand,
     int bufferSize = 1000,
   }) {
     if (_initialized) return;
@@ -71,20 +79,103 @@ class Logscope {
 
     if (!_enabled) return;
 
-    // Set device context if any info was provided
-    if (appName != null ||
-        appVersion != null ||
-        deviceModel != null ||
-        osVersion != null) {
+    // Auto-detect build mode
+    String buildMode = 'Release';
+    assert(() {
+      buildMode = 'Debug';
+      return true;
+    }());
+    if (kProfileMode) buildMode = 'Profile';
+
+    // Auto-infer environment from build mode if not provided
+    final autoEnvironment = environment ??
+        (buildMode == 'Debug'
+            ? 'Development'
+            : buildMode == 'Profile'
+                ? 'Staging'
+                : 'Production');
+
+    // Auto-detect platform info
+    final autoOsVersion = osVersion ?? '${Platform.operatingSystem} ${Platform.operatingSystemVersion}';
+    final autoLocale = PlatformDispatcher.instance.locale.toString();
+    final autoTimezone = DateTime.now().timeZoneName;
+
+    // Set initial context with whatever we know synchronously
+    DebugLogStore.instance.setDeviceContext(
+      DeviceContext(
+        appName: appName,
+        appVersion: appVersion,
+        buildNumber: buildNumber,
+        packageName: packageName,
+        environment: autoEnvironment,
+        deviceModel: deviceModel,
+        osVersion: autoOsVersion,
+        manufacturer: manufacturer,
+        brand: brand,
+        locale: autoLocale,
+        timezone: autoTimezone,
+        dartVersion: Platform.version.split(' ').first,
+        flutterVersion: flutterVersion,
+        flutterMode: buildMode,
+      ),
+    );
+
+    // Async: fetch package info and merge into context
+    // User-provided values always take priority over auto-detected.
+    _fetchAndMergePackageInfo(
+      userAppName: appName,
+      userAppVersion: appVersion,
+      userBuildNumber: buildNumber,
+      userPackageName: packageName,
+      autoEnvironment: autoEnvironment,
+      deviceModel: deviceModel,
+      autoOsVersion: autoOsVersion,
+      manufacturer: manufacturer,
+      brand: brand,
+      autoLocale: autoLocale,
+      autoTimezone: autoTimezone,
+      flutterVersion: flutterVersion,
+      buildMode: buildMode,
+    );
+  }
+
+  static Future<void> _fetchAndMergePackageInfo({
+    required String? userAppName,
+    required String? userAppVersion,
+    required String? userBuildNumber,
+    required String? userPackageName,
+    required String autoEnvironment,
+    required String? deviceModel,
+    required String autoOsVersion,
+    required String? manufacturer,
+    required String? brand,
+    required String autoLocale,
+    required String autoTimezone,
+    required String? flutterVersion,
+    required String buildMode,
+  }) async {
+    try {
+      final info = await PackageInfo.fromPlatform();
       DebugLogStore.instance.setDeviceContext(
         DeviceContext(
-          appName: appName,
-          appVersion: appVersion,
-          buildNumber: buildNumber,
+          appName: userAppName ?? info.appName,
+          appVersion: userAppVersion ?? info.version,
+          buildNumber: userBuildNumber ?? info.buildNumber,
+          packageName: userPackageName ?? info.packageName,
+          environment: autoEnvironment,
           deviceModel: deviceModel,
-          osVersion: osVersion,
+          osVersion: autoOsVersion,
+          manufacturer: manufacturer,
+          brand: brand,
+          locale: autoLocale,
+          timezone: autoTimezone,
+          dartVersion: Platform.version.split(' ').first,
+          flutterVersion: flutterVersion,
+          flutterMode: buildMode,
         ),
       );
+    } catch (_) {
+      // Silently fail — package_info_plus may not work on all platforms
     }
   }
 
@@ -266,8 +357,13 @@ class Logscope {
     String? appName,
     String? appVersion,
     String? buildNumber,
+    String? packageName,
+    String? environment,
+    String? flutterVersion,
     String? deviceModel,
     String? osVersion,
+    String? manufacturer,
+    String? brand,
     Map<String, String>? custom,
   }) {
     DebugLogStore.instance.setDeviceContext(
@@ -275,8 +371,13 @@ class Logscope {
         appName: appName,
         appVersion: appVersion,
         buildNumber: buildNumber,
+        packageName: packageName,
+        environment: environment,
         deviceModel: deviceModel,
         osVersion: osVersion,
+        manufacturer: manufacturer,
+        brand: brand,
+        flutterVersion: flutterVersion,
         custom: custom,
       ),
     );

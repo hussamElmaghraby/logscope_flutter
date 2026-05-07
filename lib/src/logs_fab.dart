@@ -497,6 +497,9 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
   Timer? _searchDebounce;
   LogEntry? _selectedHttpEntry;
 
+  /// Main tab: 0 = Logs, 1 = Device Info
+  int _mainTab = 0;
+
   // ── Toast state ──
   bool _showToast = false;
   Timer? _toastTimer;
@@ -668,84 +671,95 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
                       // ── Header bar ──
                       _buildHeader(),
 
-                      // ── Search bar ──
-                      _buildSearchBar(),
+                      // ── Main tab switcher ──
+                      _buildMainTabBar(),
 
-                      // ── Filter chips ──
-                      _buildFilterBar(),
+                      // ── Tab content ──
+                      if (_mainTab == 0) ...[
+                        // ── Search bar ──
+                        _buildSearchBar(),
 
-                      // ── Stats row ──
-                      _buildStatsRow(),
+                        // ── Filter chips ──
+                        _buildFilterBar(),
 
-                      // ── Divider ──
-                      Container(height: 1, color: const Color(0x1AFFFFFF)),
+                        // ── Stats row ──
+                        _buildStatsRow(),
 
-                      // ── Log list ──
-                      Expanded(
-                        child: _filteredLogs.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      _activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty
-                                          ? Icons.filter_alt_off_outlined
-                                          : Icons.receipt_long_outlined,
-                                      size: 48,
-                                      color: const Color(0x33FFFFFF),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      _activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty
-                                          ? 'No matching logs'
-                                          : 'No logs yet',
-                                      style: TextStyle(
-                                        color: const Color(0x4DFFFFFF),
-                                        fontSize: 14,
-                                        decoration: TextDecoration.none,
+                        // ── Divider ──
+                        Container(height: 1, color: const Color(0x1AFFFFFF)),
+
+                        // ── Log list ──
+                        Expanded(
+                          child: _filteredLogs.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        _activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty
+                                            ? Icons.filter_alt_off_outlined
+                                            : Icons.receipt_long_outlined,
+                                        size: 48,
+                                        color: const Color(0x33FFFFFF),
                                       ),
-                                    ),
-                                    if (_activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty) ...[
-                                      const SizedBox(height: 6),
-                                      GestureDetector(
-                                        onTap: () {
-                                          _activeFilter = _FilterCategory.all;
-                                          _searchQuery = '';
-                                          _searchController.clear();
-                                          _refreshLogs();
-                                        },
-                                        child: Text(
-                                          'Clear filters',
-                                          style: TextStyle(
-                                            color: const Color(0xFF00E676),
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            decoration: TextDecoration.none,
-                                          ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        _activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty
+                                            ? 'No matching logs'
+                                            : 'No logs yet',
+                                        style: TextStyle(
+                                          color: const Color(0x4DFFFFFF),
+                                          fontSize: 14,
+                                          decoration: TextDecoration.none,
                                         ),
                                       ),
+                                      if (_activeFilter != _FilterCategory.all || _searchQuery.isNotEmpty) ...[
+                                        const SizedBox(height: 6),
+                                        GestureDetector(
+                                          onTap: () {
+                                            _activeFilter = _FilterCategory.all;
+                                            _searchQuery = '';
+                                            _searchController.clear();
+                                            _refreshLogs();
+                                          },
+                                          child: Text(
+                                            'Clear filters',
+                                            style: TextStyle(
+                                              color: const Color(0xFF00E676),
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              decoration: TextDecoration.none,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ],
-                                  ],
+                                  ),
+                                )
+                              : ListView.builder(
+                                  controller: _scrollController,
+                                  itemCount: _filteredLogs.length,
+                                  itemBuilder: (_, index) {
+                                    final entry = _filteredLogs[index];
+                                    if (_isHttpEntry(entry)) {
+                                      return _HttpLogCard(
+                                        entry: entry,
+                                        onTap: () => setState(() => _selectedHttpEntry = entry),
+                                      );
+                                    }
+                                    return _LogEntryTile(entry: entry);
+                                  },
                                 ),
-                              )
-                            : ListView.builder(
-                                controller: _scrollController,
-                                itemCount: _filteredLogs.length,
-                                itemBuilder: (_, index) {
-                                  final entry = _filteredLogs[index];
-                                  if (_isHttpEntry(entry)) {
-                                    return _HttpLogCard(
-                                      entry: entry,
-                                      onTap: () => setState(() => _selectedHttpEntry = entry),
-                                    );
-                                  }
-                                  return _LogEntryTile(entry: entry);
-                                },
-                              ),
-                      ),
+                        ),
 
-                      // ── Bottom action bar ──
-                      _buildBottomBar(mq),
+                        // ── Bottom action bar ──
+                        _buildBottomBar(mq),
+                      ] else ...[
+                        // ── Device & App Info tab ──
+                        Expanded(
+                          child: _DeviceInfoTab(),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -844,19 +858,87 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
               ),
             ),
           ),
-          GestureDetector(
-            onTap: _clearLogs,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0x33F44336),
-                borderRadius: BorderRadius.circular(8),
+          if (_mainTab == 0)
+            GestureDetector(
+              onTap: _clearLogs,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0x33F44336),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.delete_outline, color: Color(0xFFF44336), size: 20),
               ),
-              child: const Icon(Icons.delete_outline, color: Color(0xFFF44336), size: 20),
             ),
-          ),
           const SizedBox(width: 12),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMainTabBar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0x0FFFFFFF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          _buildMainTabItem(
+            label: 'Logs',
+            icon: Icons.receipt_long_outlined,
+            index: 0,
+          ),
+          _buildMainTabItem(
+            label: 'Device Info',
+            icon: Icons.phone_android_rounded,
+            index: 1,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainTabItem({
+    required String label,
+    required IconData icon,
+    required int index,
+  }) {
+    final selected = _mainTab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _mainTab = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0x1AFFFFFF) : null,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 15,
+                color: selected ? const Color(0xDDFFFFFF) : const Color(0x55FFFFFF),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected ? const Color(0xDDFFFFFF) : const Color(0x55FFFFFF),
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1963,3 +2045,318 @@ class _LogEntryTileState extends State<_LogEntryTile> {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Device & App Info tab
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _DeviceInfoTab extends StatelessWidget {
+  const _DeviceInfoTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = DebugLogStore.instance;
+    final deviceContext = store.deviceContext;
+    final sections = deviceContext?.toDisplaySections() ?? {};
+
+    // Build session info
+    final sessionInfo = <String, String>{};
+    final sessionStart = store.sessionStart;
+    final now = DateTime.now();
+    final duration = now.difference(sessionStart);
+    final minutes = duration.inMinutes;
+    final sessionStr = minutes > 0 ? '$minutes min' : '${duration.inSeconds}s';
+    sessionInfo['Current Date'] =
+        '${now.year}-${_pad2(now.month)}-${_pad2(now.day)}';
+    sessionInfo['Current Time'] =
+        '${_pad2(now.hour)}:${_pad2(now.minute)}:${_pad2(now.second)}';
+    sessionInfo['Session Start'] =
+        '${sessionStart.year}-${_pad2(sessionStart.month)}-${_pad2(sessionStart.day)} '
+        '${_pad2(sessionStart.hour)}:${_pad2(sessionStart.minute)}:${_pad2(sessionStart.second)}';
+    sessionInfo['Duration'] = sessionStr;
+    sessionInfo['Total Logs'] = '${store.totalCount}';
+    sessionInfo['Errors'] = '${store.errorCount}';
+    sessionInfo['Warnings'] = '${store.warningCount}';
+
+    // Auto-detected platform info (always available)
+    final platformInfo = <String, String>{};
+    platformInfo['Platform'] = Platform.operatingSystem;
+    platformInfo['OS Version'] = Platform.operatingSystemVersion;
+    platformInfo['Dart Version'] = Platform.version.split(' ').first;
+    platformInfo['Number of Processors'] = '${Platform.numberOfProcessors}';
+    platformInfo['Locale'] = PlatformDispatcher.instance.locale.toString();
+    platformInfo['Timezone'] = '${DateTime.now().timeZoneName} (UTC${now.timeZoneOffset.isNegative ? '' : '+'}${now.timeZoneOffset.inHours}:${_pad2(now.timeZoneOffset.inMinutes.remainder(60).abs())})';
+
+    final hasSections = sections.isNotEmpty;
+
+    return Column(
+      children: [
+        // ── Copy All button ──
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: GestureDetector(
+            onTap: () {
+              final buf = StringBuffer();
+              buf.writeln('═══ Device & App Info ═══\n');
+
+              buf.writeln('── Session ──');
+              for (final kv in sessionInfo.entries) {
+                buf.writeln('  ${kv.key}: ${kv.value}');
+              }
+              buf.writeln();
+
+              if (hasSections) {
+                for (final section in sections.entries) {
+                  buf.writeln('── ${section.key} ──');
+                  for (final kv in section.value.entries) {
+                    buf.writeln('  ${kv.key}: ${kv.value}');
+                  }
+                  buf.writeln();
+                }
+              }
+
+              buf.writeln('── Platform (Auto-detected) ──');
+              for (final kv in platformInfo.entries) {
+                buf.writeln('  ${kv.key}: ${kv.value}');
+              }
+
+              Clipboard.setData(ClipboardData(text: buf.toString()));
+              _CopiedToastScope.of(context)?.call();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0x0DFFFFFF),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0x14FFFFFF)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.copy_all_rounded, size: 15, color: Color(0xB3FFFFFF)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Copy All Info',
+                    style: TextStyle(
+                      color: const Color(0xB3FFFFFF),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        Container(height: 1, color: const Color(0x1AFFFFFF)),
+
+        // ── Scrollable content ──
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+            children: [
+              // Session info (date/time) — shown first for visibility
+              _InfoSection(
+                title: 'Session',
+                icon: Icons.schedule_rounded,
+                color: const Color(0xFF78909C),
+                entries: sessionInfo,
+              ),
+
+              // Show user-provided sections
+              if (hasSections)
+                ...sections.entries.map((section) => _InfoSection(
+                      title: section.key,
+                      icon: _sectionIcon(section.key),
+                      color: _sectionColor(section.key),
+                      entries: section.value,
+                    )),
+
+              // No user info provided fallback
+              if (!hasSections)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0x0AFFFFFF),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0x0DFFFFFF)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded, size: 16, color: Color(0x66FFFFFF)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Pass appName, appVersion, deviceModel, etc. '
+                          'to Logscope.init() for richer info.',
+                          style: TextStyle(
+                            color: const Color(0x66FFFFFF),
+                            fontSize: 11,
+                            height: 1.4,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Platform auto-detected info
+              _InfoSection(
+                title: 'Platform',
+                icon: Icons.developer_board_rounded,
+                color: const Color(0xFF90A4AE),
+                entries: platformInfo,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _pad2(int n) => n.toString().padLeft(2, '0');
+
+  static IconData _sectionIcon(String title) {
+    switch (title) {
+      case 'App Info':
+        return Icons.apps_rounded;
+      case 'Device Info':
+        return Icons.phone_android_rounded;
+      case 'Custom':
+        return Icons.tune_rounded;
+      default:
+        return Icons.info_outline;
+    }
+  }
+
+  static Color _sectionColor(String title) {
+    switch (title) {
+      case 'App Info':
+        return const Color(0xFF81C784);
+      case 'Device Info':
+        return const Color(0xFF90CAF9);
+      case 'Custom':
+        return const Color(0xFFFFCC80);
+      default:
+        return const Color(0xFF9E9E9E);
+    }
+  }
+}
+
+/// A single section card in the Device Info tab.
+class _InfoSection extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final Map<String, String> entries;
+
+  const _InfoSection({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.entries,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: const Color(0x0AFFFFFF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0x0DFFFFFF),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Section header ──
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 11, 14, 9),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.06),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(14),
+                topRight: Radius.circular(14),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 15, color: color),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    final buf = StringBuffer();
+                    for (final kv in entries.entries) {
+                      buf.writeln('${kv.key}: ${kv.value}');
+                    }
+                    Clipboard.setData(ClipboardData(text: buf.toString()));
+                    _CopiedToastScope.of(context)?.call();
+                  },
+                  child: Icon(Icons.copy_rounded, size: 13, color: const Color(0x4DFFFFFF)),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Entries ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+            child: Column(
+              children: entries.entries.map((kv) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 7),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 130,
+                        child: Text(
+                          kv.key,
+                          style: const TextStyle(
+                            color: Color(0x99FFFFFF),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          kv.value,
+                          style: const TextStyle(
+                            color: Color(0xF0FFFFFF),
+                            fontSize: 12,
+                            height: 1.3,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

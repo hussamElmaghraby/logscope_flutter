@@ -3,7 +3,8 @@
 /// - [DebugLogStore] — singleton ring buffer with broadcast stream and export.
 /// - [AppLogger] — static methods that print via `debugPrint` in debug mode.
 /// - [DebugLogInterceptor] — Dio interceptor with sanitized HTTP logging.
-/// - [LogsFab] — draggable debug FAB + fullscreen log console overlay.
+/// - [LogsFab] — draggable debug FAB + fullscreen log console overlay
+///   with **Device & App Info** tab (auto-detected platform, session stats).
 /// - [LayerClassifier] — auto-classifies logs as SERVER/NETWORK/MOBILE/AUTH.
 library;
 

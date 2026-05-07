@@ -26,18 +26,71 @@ class DeviceContext {
   final String? appName;
   final String? appVersion;
   final String? buildNumber;
+  final String? packageName;
+  final String? environment;
   final String? deviceModel;
   final String? osVersion;
+  final String? manufacturer;
+  final String? brand;
+  final String? locale;
+  final String? timezone;
+  final String? screenSize;
+  final String? pixelRatio;
+  final String? dartVersion;
+  final String? flutterVersion;
+  final String? flutterMode;
   final Map<String, String>? custom;
 
   const DeviceContext({
     this.appName,
     this.appVersion,
     this.buildNumber,
+    this.packageName,
+    this.environment,
     this.deviceModel,
     this.osVersion,
+    this.manufacturer,
+    this.brand,
+    this.locale,
+    this.timezone,
+    this.screenSize,
+    this.pixelRatio,
+    this.dartVersion,
+    this.flutterVersion,
+    this.flutterMode,
     this.custom,
   });
+
+  /// Returns a structured map of all device/app info for display.
+  ///
+  /// Splits into two sections: 'App Info' and 'Device Info'.
+  Map<String, Map<String, String>> toDisplaySections() {
+    final appInfo = <String, String>{};
+    if (appName != null) appInfo['App Name'] = appName!;
+    if (appVersion != null) appInfo['Version'] = appVersion!;
+    if (buildNumber != null) appInfo['Build Number'] = buildNumber!;
+    if (packageName != null) appInfo['Package Name'] = packageName!;
+    if (environment != null) appInfo['Environment'] = environment!;
+    if (flutterMode != null) appInfo['Build Mode'] = flutterMode!;
+    if (flutterVersion != null) appInfo['Flutter Version'] = flutterVersion!;
+    if (dartVersion != null) appInfo['Dart Version'] = dartVersion!;
+
+    final deviceInfo = <String, String>{};
+    if (deviceModel != null) deviceInfo['Device Model'] = deviceModel!;
+    if (manufacturer != null) deviceInfo['Manufacturer'] = manufacturer!;
+    if (brand != null) deviceInfo['Brand'] = brand!;
+    if (osVersion != null) deviceInfo['OS Version'] = osVersion!;
+    if (locale != null) deviceInfo['Locale'] = locale!;
+    if (timezone != null) deviceInfo['Timezone'] = timezone!;
+    if (screenSize != null) deviceInfo['Screen Size'] = screenSize!;
+    if (pixelRatio != null) deviceInfo['Pixel Ratio'] = pixelRatio!;
+
+    final result = <String, Map<String, String>>{};
+    if (appInfo.isNotEmpty) result['App Info'] = appInfo;
+    if (deviceInfo.isNotEmpty) result['Device Info'] = deviceInfo;
+    if (custom != null && custom!.isNotEmpty) result['Custom'] = custom!;
+    return result;
+  }
 
   String toReportHeader(DateTime sessionStart, int totalLogs, int errors,
       int warnings) {
@@ -49,9 +102,13 @@ class DeviceContext {
       if (buildNumber != null) buf.write(' (build $buildNumber)');
       buf.writeln();
     }
+    if (packageName != null) buf.writeln('Package: $packageName');
+    if (environment != null) buf.writeln('Environment: $environment');
+    if (flutterVersion != null) buf.writeln('Flutter: $flutterVersion');
     if (deviceModel != null || osVersion != null) {
       buf.writeln('Device: ${deviceModel ?? 'Unknown'} — ${osVersion ?? 'Unknown OS'}');
     }
+    if (manufacturer != null) buf.writeln('Manufacturer: $manufacturer');
     final now = DateTime.now();
     final duration = now.difference(sessionStart);
     final minutes = duration.inMinutes;
@@ -208,6 +265,9 @@ class DebugLogStore {
 
   /// Optional device/app context for export headers.
   DeviceContext? _deviceContext;
+
+  /// The current device context, if set.
+  DeviceContext? get deviceContext => _deviceContext;
 
   /// Whether to auto-classify the issue layer on each log entry.
   bool autoClassifyLayer = true;

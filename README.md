@@ -12,21 +12,22 @@ Logscope helps testers and developers instantly identify _where_ a problem origi
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/fab_overlay.png" width="280" alt="Debug FAB & Error Toast" />
+  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/fab_overlay.png" width="230" alt="Debug FAB & Error Toast" />
   &nbsp;&nbsp;
-  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/log_console.png" width="280" alt="Log Console" />
+  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/log_console.png" width="230" alt="Log Console" />
   &nbsp;&nbsp;
-  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/http_cards.png" width="280" alt="HTTP Structured Cards" />
+  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/device_info_tab.png" width="230" alt="Device Info Tab" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/http_cards.png" width="230" alt="HTTP Structured Cards" />
 </p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/hussamElmaghraby/logscope_flutter/main/screenshots/layer_classification.png" width="600" alt="Layer Classification System" />
 </p>
 
-|  |  |
-|:---:|:---:|
-| **Draggable FAB** with error badge & toast | **Fullscreen Console** with filters & search |
-| **Structured HTTP Cards** with layer badges | **Auto Layer Classification** diagram |
+|  |  |  |  |
+|:---:|:---:|:---:|:---:|
+| **Draggable FAB** | **Log Console** | **Device Info** | **HTTP Cards** |
 
 ---
 
@@ -34,6 +35,7 @@ Logscope helps testers and developers instantly identify _where_ a problem origi
 
 | Feature | Description |
 |---|---|
+| 📱 **Device Info Tab** | Real-time console tab showing app info, device specs, platform OS, and live session duration/time. |
 | 🏷️ **Layer classification** | Every log is auto-tagged as `SERVER`, `NETWORK`, `MOBILE`, or `AUTH` based on HTTP status codes, exception patterns, and custom rules. |
 | 🔄 **Ring-buffer store** | Fixed-size circular buffer (`LogRingBuffer`) — memory-safe, O(1) insert, oldest entries evicted first. |
 | 🌐 **Dio interceptor** | One-line setup captures all HTTP traffic with structured request/response cards. |
@@ -51,7 +53,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  logscope_flutter: ^0.3.5
+  logscope_flutter: ^0.4.0
 ```
 
 Then run:
@@ -64,13 +66,13 @@ flutter pub get
 
 ## 🚀 Quick Start
 
-### 2-line integration
+### Zero-config setup (2 lines)
 
 ```dart
 import 'package:logscope_flutter/logscope_flutter.dart';
 
 void main() {
-  Logscope.init(appName: 'MyApp', appVersion: '1.0.0');
+  Logscope.init(); // ← Auto-detects app info, device, OS, and environment!
   runApp(Logscope.wrap(const MyApp()));
 }
 ```
@@ -100,15 +102,15 @@ Logscope.bloc('CounterState(42)');
 
 ```dart
 Logscope.init(
-  enabled: true,                    // master switch (defaults to kDebugMode)
+  enabled: true,                    // master switch (defaults to true)
   captureFlutterErrors: true,       // hook FlutterError + PlatformDispatcher
   showErrorToasts: true,            // overlay notification on errors
-  appName: 'MyApp',
-  appVersion: '2.3.1',
-  buildNumber: '47',
-  deviceModel: 'iPhone 14 Pro',     // pass from device_info_plus
-  osVersion: 'iOS 17.4',
   bufferSize: 1000,                 // max entries in ring buffer
+
+  // OVERRIDES (Auto-detected by default)
+  // appName: 'MyApp',              // Normally fetched via package_info_plus
+  // appVersion: '2.3.1',
+  // environment: 'Staging',        // Normally inferred from Build Mode
 );
 ```
 

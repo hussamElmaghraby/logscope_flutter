@@ -1,3 +1,9 @@
+## 0.4.0
+
+- **New Device Info Tab** — added a dedicated tab in the log console to view app, device, platform, and session information (with live duration/date/time).
+- **Zero-Config Initialization** — `Logscope.init()` now automatically detects your app name, app version, build number, package name (via `package_info_plus`), and environment (via build mode). No manual parameters needed!
+- **UI Refresh** — updated the log console with a muted, calm, and modern color palette for improved readability.
+
 ## 0.3.9
 
 - **Shortened package description** — fits within pub.dev's 60–180 character guideline for search-engine-friendly display.
