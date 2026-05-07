@@ -29,7 +29,12 @@ migrate_working_dir/
 .packages
 .pub-cache/
 .pub/
-/build/
+build/
+.symlinks/
+.plugin_symlinks/
+Pods/
+.gradle/
+*.xcworkspace/
 pubspec.lock
 
 # Web related
@@ -48,3 +53,4 @@ app.*.map.json
 
 # Coverage
 coverage/
+/.claude/

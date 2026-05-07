@@ -35,15 +35,6 @@ Logscope.d('Loaded items', tag: 'Repo');
 Logscope.e('Save failed', error: e, stackTrace: s);
 ```
 
-## Already done (SwissFiat monorepo)
-
-1. **Package** at `packages/logscope_flutter/`.
-2. **`core`** depends on `logscope_flutter` via path `../logscope_flutter` and **re-exports** the package from `packages/core/lib/core.dart`, so code that only imports `package:core/core.dart` still sees all public APIs.
-3. **`sentry_bloc_observer`** imports `package:logscope_flutter/logscope_flutter.dart` directly.
-4. **`LogsFab` decoupled from `AppConfig`**: `lib/app/app.dart` passes `enabled: AppConfig.showDebugFab`.
-5. **Removed** from `core`: `lib/src/utils/app_logger.dart`, `lib/src/services/console_loggers/*`.
-6. **`data`** unchanged: still uses `DebugLogInterceptor` through `package:core/core.dart`.
-
 ## Monorepo migration checklist
 
 After renaming the package, update these files in the monorepo:

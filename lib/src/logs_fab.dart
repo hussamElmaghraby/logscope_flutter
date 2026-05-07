@@ -862,78 +862,174 @@ class _LogConsoleOverlayState extends State<_LogConsoleOverlay> {
   }
 
   Widget _buildFilterBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: SizedBox(
-        height: 42,
-        child: Row(
-          children: [
-            _buildFilterItem(
-              label: 'All',
-              category: _FilterCategory.all,
-              color: Colors.white,
-            ),
-            _buildFilterItem(
-              label: 'Network',
-              category: _FilterCategory.network,
-              color: const Color(0xFF00BCD4),
-            ),
-            _buildFilterItem(
-              label: 'Errors',
-              category: _FilterCategory.errors,
-              color: const Color(0xFFF44336),
-            ),
-            _buildFilterItem(
-              label: 'Warnings',
-              category: _FilterCategory.warnings,
-              color: const Color(0xFFFF9800),
-            ),
-            _buildFilterItem(
-              label: 'Info',
-              category: _FilterCategory.info,
-              color: const Color(0xFF4CAF50),
-            ),
-          ],
-        ),
+    // Pre-compute per-category counts from entries narrowed by the search
+    // query (but not the active category). This makes the badges answer the
+    // useful question: "if I switch to this filter, how many will I see?"
+    final entries = DebugLogStore.instance.entries;
+    final scoped = _searchQuery.isEmpty
+        ? entries
+        : entries.where((e) {
+            final lower = _searchQuery.toLowerCase();
+            return e.message.toLowerCase().contains(lower) ||
+                (e.tag?.toLowerCase().contains(lower) ?? false);
+          }).toList();
+
+    var networkCount = 0;
+    var errorCount = 0;
+    var warningCount = 0;
+    var infoCount = 0;
+    for (final e in scoped) {
+      switch (e.level) {
+        case LogLevel.http:
+          networkCount++;
+        case LogLevel.error:
+        case LogLevel.fatal:
+          errorCount++;
+        case LogLevel.warning:
+          warningCount++;
+        case LogLevel.info:
+          infoCount++;
+        default:
+          break;
+      }
+    }
+
+    return SizedBox(
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        physics: const BouncingScrollPhysics(),
+        children: [
+          _buildFilterItem(
+            label: 'All',
+            icon: Icons.dehaze_rounded,
+            category: _FilterCategory.all,
+            color: Colors.white,
+          ),
+          _buildFilterItem(
+            label: 'Network',
+            icon: Icons.cloud_outlined,
+            category: _FilterCategory.network,
+            color: const Color(0xFF00BCD4),
+            count: networkCount,
+          ),
+          _buildFilterItem(
+            label: 'Errors',
+            icon: Icons.error_outline_rounded,
+            category: _FilterCategory.errors,
+            color: const Color(0xFFF44336),
+            count: errorCount,
+          ),
+          _buildFilterItem(
+            label: 'Warnings',
+            icon: Icons.warning_amber_rounded,
+            category: _FilterCategory.warnings,
+            color: const Color(0xFFFF9800),
+            count: warningCount,
+          ),
+          _buildFilterItem(
+            label: 'Info',
+            icon: Icons.info_outline_rounded,
+            category: _FilterCategory.info,
+            color: const Color(0xFF4CAF50),
+            count: infoCount,
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildFilterItem({
     required String label,
+    required IconData icon,
     required _FilterCategory category,
     required Color color,
+    int? count,
   }) {
     final selected = _activeFilter == category;
-    return Expanded(
+    final fg = selected ? color : const Color(0xCCFFFFFF);
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
       child: GestureDetector(
         onTap: () => _onFilterChanged(category),
-        child: Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-            decoration: BoxDecoration(
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      color.withValues(alpha: 0.32),
+                      color.withValues(alpha: 0.16),
+                    ],
+                  )
+                : null,
+            color: selected ? null : const Color(0x14FFFFFF),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
               color: selected
-                  ? color.withValues(alpha: 0.25)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: selected ? color : Colors.white24,
-                width: 1,
-              ),
+                  ? color.withValues(alpha: 0.9)
+                  : const Color(0x1FFFFFFF),
+              width: selected ? 1.2 : 1,
             ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: selected ? color : Colors.white54,
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                decoration: TextDecoration.none,
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      spreadRadius: -2,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: fg),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: fg,
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  letterSpacing: 0.1,
+                  decoration: TextDecoration.none,
+                ),
               ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+              if (count != null && count > 0) ...[
+                const SizedBox(width: 6),
+                Container(
+                  constraints: const BoxConstraints(minWidth: 18),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? color.withValues(alpha: 0.95)
+                        : color.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Text(
+                    count > 99 ? '99+' : '$count',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: selected ? Colors.white : color,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),
